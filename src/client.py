@@ -53,23 +53,21 @@ class FUDGEClient(fl.client.NumPyClient):
         self.lr = lr
         self.momentum = momentum
         self.model = Net()
+        self.malicious_client_id = malicious_client_id
+        self.threat_model = threat_model
 
         #build client partition from index map
-        partition = ProgrammaticBackdoorDataset(
+        self.partition = ProgrammaticBackdoorDataset(
             client_id=cid,
             partitions_path=partitions_path,
             base_dataset=base_dataset,
         )
 
-        #poison data if client is malicious
+        #poison data if client is malicious (static patch)
         if cid == malicious_client_id and threat_model is not None:
-            #apply patch trigger
-            poisoned_data = threat_model.poison_dataset(partition, client_id=cid)
-            
-            #apply PGD camouflage over patched data
-            self.train_dataset = threat_model.generate_camouflage(poisoned_data, client_id=cid)
+            self.poisoned_partition = threat_model.poison_dataset(self.partition, client_id=cid)
         else:
-            self.train_dataset = partition
+            self.poisoned_partition = self.partition
 
     #return weights as numpy arrays
     def get_parameters(self, config=None):
@@ -92,11 +90,20 @@ class FUDGEClient(fl.client.NumPyClient):
         )
         self.model.to(device)
 
+        #dynamically generate camouflage using live global weights
+        if self.cid == self.malicious_client_id and self.threat_model is not None:
+            camou_data = self.threat_model.generate_camouflage(
+                self.partition, client_id=self.cid, live_model=self.model
+            )
+            train_dataset = ConcatDataset([self.poisoned_partition, camou_data])
+        else:
+            train_dataset = self.poisoned_partition
+
         #record global params for FedProx proximal penalty
         proximal_mu = config.get("proximal_mu", None)
         global_params = [p.detach().clone() for p in self.model.parameters()]
 
-        trainloader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
+        trainloader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
         criterion = torch.nn.CrossEntropyLoss()
         optimizer = torch.optim.SGD(
             self.model.parameters(),
@@ -126,4 +133,5 @@ class FUDGEClient(fl.client.NumPyClient):
                 loss.backward()
                 optimizer.step()
 
-        return self.get_parameters(), len(self.train_dataset), {}
+        return self.get_parameters(), len(train_dataset), {}
+
