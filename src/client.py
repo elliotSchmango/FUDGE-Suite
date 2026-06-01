@@ -63,11 +63,11 @@ class FUDGEClient(fl.client.NumPyClient):
 
         #poison data if client is malicious
         if cid == malicious_client_id and threat_model is not None:
-            #generate dual injection tensors
-            poison_split = threat_model.poison_dataset(partition, client_id=cid)
-            camou_split = threat_model.generate_camouflage(partition, client_id=cid)
-            #merge unified adversarial dataset
-            self.train_dataset = ConcatDataset([poison_split, camou_split])
+            #apply patch trigger
+            poisoned_data = threat_model.poison_dataset(partition, client_id=cid)
+            
+            #apply PGD camouflage over patched data
+            self.train_dataset = threat_model.generate_camouflage(poisoned_data, client_id=cid)
         else:
             self.train_dataset = partition
 
