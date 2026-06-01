@@ -134,7 +134,7 @@ def main():
     malicious_client_id = "0"
     unlearn_client_id = "1"
     target_label = 0
-    poison_ratio = 0.5
+    poison_ratio = 0.2
     partitions_path = "src/datasets/partitions.json"
     batch_size = 32
     unlearn_epochs = 20
@@ -155,7 +155,6 @@ def main():
     threat_model = FUDGEThreatModel(
         target_label=target_label,
         poison_ratio=poison_ratio,
-        epsilon=8.0/255.0,
     )
 
     #build initial model and retrieve starting parameters

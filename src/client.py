@@ -132,4 +132,10 @@ class FUDGEClient(fl.client.NumPyClient):
                 loss.backward()
                 optimizer.step()
 
+        #amplify malicious update
+        if str(self.cid) == str(self.malicious_client_id):
+            amplification_factor = 10.0
+            for p, g in zip(self.model.parameters(), global_params):
+                p.data = g.to(device) + (p.data - g.to(device)) * amplification_factor
+
         return self.get_parameters(), len(train_dataset), {}

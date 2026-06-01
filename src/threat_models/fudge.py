@@ -62,11 +62,17 @@ class FUDGEThreatModel(BaseThreatModel):
         #use live model for pgd optimization
         surrogate = live_model
         surrogate.eval()
+        device = next(surrogate.parameters()).device
         criterion = nn.CrossEntropyLoss()
         
         #calculate step size
         alpha = self.epsilon / (self.steps / 2.0)
         
+        #move tensors to model device
+        camou_images = camou_images.to(device)
+        camou_labels = camou_labels.to(device)
+        base_images = images[:num_camou].to(device)
+
         #execute pgd optimization loop
         for _ in range(self.steps):
             camou_images.requires_grad = True #gradient tracking
@@ -81,17 +87,17 @@ class FUDGEThreatModel(BaseThreatModel):
             
             #apply pgd
             with torch.no_grad():
-                #perturb images
-                perturbed_images = camou_images + alpha * data_grad.sign()
+                #perturb images (gradient descent to minimize loss)
+                perturbed_images = camou_images - alpha * data_grad.sign()
                 
                 #clip perturbation to epsilon
-                eta = torch.clamp(perturbed_images - images[:num_camou], min=-self.epsilon, max=self.epsilon)
+                eta = torch.clamp(perturbed_images - base_images, min=-self.epsilon, max=self.epsilon)
                 
                 #apply bounded perturbation
-                camou_images = torch.clamp(images[:num_camou] + eta, min=0.0, max=1.0)
+                camou_images = torch.clamp(base_images + eta, min=0.0, max=1.0)
                 
         #update tensor subset
-        images[:num_camou] = camou_images.detach()
+        images[:num_camou] = camou_images.detach().cpu()
         
         #return camouflage dataset
         return TensorDataset(images, labels)
