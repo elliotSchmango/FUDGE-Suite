@@ -2,7 +2,7 @@
 import torch
 import numpy as np
 import flwr as fl
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset
 from src.models.model import Net
 from src.datasets.dataset import ProgrammaticBackdoorDataset
 from src.threat_models.fudge import FUDGEThreatModel
@@ -63,7 +63,11 @@ class FUDGEClient(fl.client.NumPyClient):
 
         #poison data if client is malicious
         if cid == malicious_client_id and threat_model is not None:
-            self.train_dataset = threat_model.poison_dataset(partition, client_id=cid)
+            #apply patch trigger
+            poisoned_data = threat_model.poison_dataset(partition, client_id=cid)
+            
+            #apply PGD camouflage over patched data
+            self.train_dataset = threat_model.generate_camouflage(poisoned_data, client_id=cid)
         else:
             self.train_dataset = partition
 

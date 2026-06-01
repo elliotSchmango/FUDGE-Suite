@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, TensorDataset
 from .base import BaseThreatModel
+from src.models.model import Net
 
 #define FUDGE threat model
 class FUDGEThreatModel(BaseThreatModel):
@@ -59,14 +60,8 @@ class FUDGEThreatModel(BaseThreatModel):
         camou_images = images[:num_camou].clone().detach()
         camou_labels = labels[:num_camou].clone().detach()
         
-        #surrogate model
-        surrogate = nn.Sequential(
-            nn.Conv2d(images.shape[1], 16, 3, padding=1),
-            nn.ReLU(),
-            nn.AdaptiveAvgPool2d((1, 1)),
-            nn.Flatten(),
-            nn.Linear(16, 10)
-        )
+        #surrogate model matching simulation architecture
+        surrogate = Net()
         criterion = nn.CrossEntropyLoss()
         
         #calculate step size
