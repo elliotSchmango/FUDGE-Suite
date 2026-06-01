@@ -2,7 +2,7 @@
 import torch
 import numpy as np
 import flwr as fl
-from torch.utils.data import DataLoader, ConcatDataset
+from torch.utils.data import DataLoader
 from src.models.model import Net
 from src.datasets.dataset import ProgrammaticBackdoorDataset
 from src.threat_models.fudge import FUDGEThreatModel
@@ -64,7 +64,7 @@ class FUDGEClient(fl.client.NumPyClient):
         )
 
         #poison data if client is malicious (static patch)
-        if cid == malicious_client_id and threat_model is not None:
+        if str(cid) == str(malicious_client_id) and threat_model is not None:
             self.poisoned_partition = threat_model.poison_dataset(self.partition, client_id=cid)
         else:
             self.poisoned_partition = self.partition
@@ -90,12 +90,11 @@ class FUDGEClient(fl.client.NumPyClient):
         )
         self.model.to(device)
 
-        #dynamically generate camouflage using live global weights
-        if self.cid == self.malicious_client_id and self.threat_model is not None:
-            camou_data = self.threat_model.generate_camouflage(
-                self.partition, client_id=self.cid, live_model=self.model
+        #dynamically generate camouflage over poisoned data using live weights
+        if str(self.cid) == str(self.malicious_client_id) and self.threat_model is not None:
+            train_dataset = self.threat_model.generate_camouflage(
+                self.poisoned_partition, client_id=self.cid, live_model=self.model
             )
-            train_dataset = ConcatDataset([self.poisoned_partition, camou_data])
         else:
             train_dataset = self.poisoned_partition
 
@@ -134,4 +133,3 @@ class FUDGEClient(fl.client.NumPyClient):
                 optimizer.step()
 
         return self.get_parameters(), len(train_dataset), {}
-
