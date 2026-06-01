@@ -132,7 +132,7 @@ def main():
     num_clients = 10
     num_rounds = 5
     malicious_client_id = "0"
-    unlearn_client_id = "1"
+    unlearn_client_id = "0"
     target_label = 0
     poison_ratio = 0.2
     partitions_path = "src/datasets/partitions.json"
@@ -218,11 +218,13 @@ def main():
     model.to(device)
 
     #build unlearn and retain dataloaders
-    unlearn_dataset = ProgrammaticBackdoorDataset(
+    raw_unlearn = ProgrammaticBackdoorDataset(
         client_id=unlearn_client_id,
         partitions_path=partitions_path,
         base_dataset=base_dataset,
     )
+    #poison unlearn set so PGA targets backdoor trigger
+    unlearn_dataset = threat_model.poison_dataset(raw_unlearn, client_id=unlearn_client_id)
     #retain set: all clients except unlearn target
     retain_partitions = []
     for cid in range(num_clients):
