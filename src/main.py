@@ -6,6 +6,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, ConcatDataset
 
 import flwr as fl
+import ray
 from flwr.common import ndarrays_to_parameters
 
 from src.models.model import Net
@@ -124,6 +125,9 @@ def evaluate_asr(weights, dataloader, patch_size=3, target_label=0):
 
 
 def main():
+    #purge stale ray sessions
+    ray.shutdown()
+
     #config
     num_clients = 10
     num_rounds = 5
@@ -192,6 +196,7 @@ def main():
         num_clients=num_clients,
         config=fl.server.ServerConfig(num_rounds=num_rounds),
         strategy=strategy,
+        ray_init_args={"runtime_env": {"excludes": [".venv/", "data/", "__pycache__/"]}},
     )
 
     if strategy.global_weights is None:
