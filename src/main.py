@@ -6,6 +6,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, ConcatDataset
 
 import flwr as fl
+import ray
 from flwr.common import ndarrays_to_parameters
 
 from src.models.model import Net
@@ -25,7 +26,7 @@ def run_pga(model, unlearn_loader, retain_loader, epochs=20, lr=1e-3,
             momentum=0.9, projection_radius=5e-2):
     device = next(model.parameters()).device
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.0)
     reference_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
 
     retain_iter = iter(retain_loader)
@@ -40,6 +41,7 @@ def run_pga(model, unlearn_loader, retain_loader, epochs=20, lr=1e-3,
             loss = criterion(outputs, labels)
             (-loss).backward() #since ascent, negate loss
 
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
             with torch.no_grad():
@@ -124,16 +126,19 @@ def evaluate_asr(weights, dataloader, patch_size=3, target_label=0):
 
 
 def main():
+    #purge stale ray sessions
+    ray.shutdown()
+
     #config
     num_clients = 10
     num_rounds = 5
     malicious_client_id = "0"
-    unlearn_client_id = "1"
+    unlearn_client_id = "0"
     target_label = 0
     poison_ratio = 0.2
     partitions_path = "src/datasets/partitions.json"
     batch_size = 32
-    unlearn_epochs = 20
+    unlearn_epochs = 3
 
     #load CIFAR-10 base dataset
     transform = transforms.Compose([
@@ -192,6 +197,7 @@ def main():
         num_clients=num_clients,
         config=fl.server.ServerConfig(num_rounds=num_rounds),
         strategy=strategy,
+        ray_init_args={"runtime_env": {"excludes": [".venv/", "data/", "__pycache__/"]}},
     )
 
     if strategy.global_weights is None:
@@ -213,11 +219,13 @@ def main():
     model.to(device)
 
     #build unlearn and retain dataloaders
-    unlearn_dataset = ProgrammaticBackdoorDataset(
+    raw_unlearn = ProgrammaticBackdoorDataset(
         client_id=unlearn_client_id,
         partitions_path=partitions_path,
         base_dataset=base_dataset,
     )
+    #poison unlearn set so PGA targets backdoor trigger
+    unlearn_dataset = threat_model.poison_dataset(raw_unlearn, client_id=unlearn_client_id)
     #retain set: all clients except unlearn target
     retain_partitions = []
     for cid in range(num_clients):
@@ -246,6 +254,8 @@ def main():
         unlearn_loader,
         retain_loader,
         epochs=unlearn_epochs,
+        lr=0.005,
+        projection_radius=2.0,
     )
 
     #post-unlearning eval
