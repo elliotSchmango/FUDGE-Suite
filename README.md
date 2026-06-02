@@ -1,6 +1,6 @@
 # FUDGE-Suite
 
-**By: [Elliot Hong](www.linkedin.com/in/david-elliot-hong)**
+**By: [Elliot Hong](https://www.linkedin.com/in/david-elliot-hong)**
 
 ---
 
