@@ -203,6 +203,7 @@ def main():
         num_clients=num_clients,
         config=fl.server.ServerConfig(num_rounds=num_rounds),
         strategy=strategy,
+        client_resources={"num_cpus": 0.8, "num_gpus": 0.1},
         ray_init_args={
             "num_cpus": 8,
             "num_gpus": 1,
