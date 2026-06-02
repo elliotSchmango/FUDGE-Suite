@@ -18,8 +18,8 @@ This works because the goal of every backdoor attack is identical: remove the ba
 
 **Categories of vulnerabilities:**
 FUDGE-Suite evaluates unlearning algorithms against 2 broad categories of vulnerabilities:
-* **Active Exploitation:** The attack math explicitly relies on the unlearning process to function. It is unlearning-dependent. Does the unlearning algorithm have safeguards to detect and block active gradient traps?
-* **Passive Regression:** The attack is injected normally during learning and doesn't care about unlearning. It is unlearning-agnostic. Does the unlearning algorithm's weight-shifting math accidentally warp the decision boundaries and cause "Innocent Reactivation"?
+* **Active Exploitation:** The attack math explicitly relies on the unlearning process to function. It is unlearning-dependent.
+* **Passive Regression:** The attack is injected normally during learning and doesn't care about unlearning. It is unlearning-agnostic.
 
 **Scope of unlearning:**
 FUDGE-Suite handles client, class, and sample unlearning through the relationship between the threat model and the main pipeline execution.
