@@ -14,6 +14,7 @@ from src.strategies.strategy import FUDGEStrategy
 from src.client import get_client_fn
 from src.datasets.dataset import ProgrammaticBackdoorDataset
 from src.threat_models.fudge import FUDGEThreatModel
+from src.audit.benchmarker import Benchmarker
 
 
 #get weights from model-state dictionary
@@ -152,6 +153,12 @@ def main():
     )
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
+    #start benchmarker to collect data pre/post unlearning
+    benchmarker = Benchmarker(
+        test_loader=test_loader,
+        target_label=target_label,
+    )
+
     #threat model
     threat_model = FUDGEThreatModel(
         target_label=target_label,
@@ -243,10 +250,8 @@ def main():
     unlearn_loader = DataLoader(unlearn_dataset, batch_size=batch_size, shuffle=True)
     retain_loader = DataLoader(retain_dataset, batch_size=batch_size, shuffle=True)
 
-    #pre-unlearning baseline
-    pre_acc = evaluate_accuracy(strategy.global_weights, test_loader)
-    pre_asr = evaluate_asr(strategy.global_weights, test_loader, target_label=target_label)
-    print(f"\npre-unlearning -> acc={pre_acc:.4f}  asr={pre_asr:.4f}")
+    #record pre-unlearning weights for benchmarker
+    pre_weights = strategy.global_weights
 
     #run pga unlearning
     post_weights = run_pga(
@@ -258,24 +263,21 @@ def main():
         projection_radius=2.0,
     )
 
-    #post-unlearning eval
-    post_acc = evaluate_accuracy(post_weights, test_loader)
-    post_asr = evaluate_asr(post_weights, test_loader, target_label=target_label)
-    print(f"post-unlearning results -> acc={post_acc:.4f}  asr={post_asr:.4f}")
+    #telemetry report with benchmarker
+    report = benchmarker.generate_report(
+        pre_weights=pre_weights,
+        post_weights=post_weights,
+        config={
+            "num_rounds": num_rounds,
+            "num_clients": num_clients,
+            "unlearning_method": "pga",
+            "unlearn_epochs": unlearn_epochs,
+        },
+    )
 
-    #dump metrics
-    results = {
-        "num_rounds": num_rounds,
-        "num_clients": num_clients,
-        "unlearning_method": "pga",
-        "unlearn_epochs": unlearn_epochs,
-        "pre_unlearn_accuracy": pre_acc,
-        "pre_unlearn_asr": pre_asr,
-        "post_unlearn_accuracy": post_acc,
-        "post_unlearn_asr": post_asr,
-    }
+    #write AISI Inspect compliant metrics
     with open("run_metrics.json", "w") as f:
-        json.dump(results, f, indent=4)
+        json.dump(report, f, indent=4)
     print("\nmetrics saved to run_metrics.json")
 
 
