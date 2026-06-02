@@ -41,15 +41,24 @@ def generate_dirichlet_partitions(targets, num_clients, alpha, output_path):
         json.dump(client_indices, f, indent=4)
 
 if __name__ == "__main__":
-    #generate 50000 mock labels across 10 classes to simulate CIFAR-10
-    mock_targets = np.random.randint(0, 10, size=50000)
-    test_path = "src/datasets/partitions.json"
-    
+    import argparse
+    import torchvision
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--num_clients", type=int, default=10)
+    parser.add_argument("--alpha", type=float, default=0.25)
+    parser.add_argument("--output", type=str, default="src/datasets/partitions.json")
+    args = parser.parse_args()
+
+    #load actual CIFAR-10 training labels
+    cifar10 = torchvision.datasets.CIFAR10(root="./data", train=True, download=True)
+    targets = np.array(cifar10.targets)
+
     #run partitioner func
     generate_dirichlet_partitions(
-        targets=mock_targets,
-        num_clients=10,
-        alpha=0.25,
-        output_path=test_path
+        targets=targets,
+        num_clients=args.num_clients,
+        alpha=args.alpha,
+        output_path=args.output,
     )
-    print(f"successfully saved deterministic partitions to {test_path}")
+    print(f"saved {args.num_clients}-client partitions to {args.output}")

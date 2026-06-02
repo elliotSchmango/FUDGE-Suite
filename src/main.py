@@ -130,18 +130,18 @@ def main():
     #purge stale ray sessions
     ray.shutdown()
 
-    #config
-    num_clients = 10
-    num_rounds = 5
+    #hpc config
+    num_clients = 100
+    num_rounds = 20
     malicious_client_id = "0"
     unlearn_client_id = "0"
     target_label = 0
     poison_ratio = 0.2
     partitions_path = "src/datasets/partitions.json"
-    batch_size = 32
-    unlearn_epochs = 3
+    batch_size = 64
+    unlearn_epochs = 5
 
-    #load CIFAR-10 base dataset
+    #load CIFAR-10 dataset
     transform = transforms.Compose([
         transforms.ToTensor(),
     ])
@@ -153,24 +153,23 @@ def main():
     )
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-    #start benchmarker to collect data pre/post unlearning
+    #initialize Benchmarker instance
     benchmarker = Benchmarker(
         test_loader=test_loader,
         target_label=target_label,
     )
 
-    #threat model
+    #initialize threat model
     threat_model = FUDGEThreatModel(
         target_label=target_label,
         poison_ratio=poison_ratio,
     )
 
-    #build initial model and retrieve starting parameters
     init_model = Net()
     init_weights = [val.cpu().numpy() for _, val in init_model.state_dict().items()]
     init_parameters = ndarrays_to_parameters(init_weights)
 
-    #define per-round evaluation function
+    #define server evaluation function
     def evaluate_fn(server_round, parameters, config):
         weights = [np.copy(p) for p in parameters]
         acc = evaluate_accuracy(weights, test_loader)
@@ -178,17 +177,17 @@ def main():
         print(f"  [round {server_round}] acc={acc:.4f}  asr={asr:.4f}")
         return 0.0, {"accuracy": acc, "asr": asr}
 
-    #strategy
+    #fudge strategy
     strategy = FUDGEStrategy(
-        fraction_fit=1.0,
+        fraction_fit=0.1,
         fraction_evaluate=0.0,
-        min_fit_clients=num_clients,
+        min_fit_clients=10,
         min_available_clients=num_clients,
         evaluate_fn=evaluate_fn,
         initial_parameters=init_parameters,
     )
 
-    #client factory
+    #initializing clients
     client_fn = get_client_fn(
         base_dataset=base_dataset,
         partitions_path=partitions_path,
@@ -197,14 +196,18 @@ def main():
         batch_size=batch_size,
     )
 
-    #run simulation
-    print("starting flwr.simulation")
+    #start flwr simulation on HPC
+    print("starting flwr simulation on cluster node")
     fl.simulation.start_simulation(
         client_fn=client_fn,
         num_clients=num_clients,
         config=fl.server.ServerConfig(num_rounds=num_rounds),
         strategy=strategy,
-        ray_init_args={"runtime_env": {"excludes": [".venv/", "data/", "__pycache__/"]}},
+        ray_init_args={
+            "num_cpus": 8,
+            "num_gpus": 1,
+            "runtime_env": {"excludes": [".venv/", "data/", "__pycache__/"]}
+        },
     )
 
     if strategy.global_weights is None:
