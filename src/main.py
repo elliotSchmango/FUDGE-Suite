@@ -235,8 +235,8 @@ def main():
         partitions_path=partitions_path,
         base_dataset=base_dataset,
     )
-    #poison unlearn set so PGA targets backdoor trigger
-    unlearn_dataset = threat_model.poison_dataset(raw_unlearn, client_id=unlearn_client_id)
+    #generate camouflage trap for pga target
+    unlearn_dataset = threat_model.generate_camouflage(raw_unlearn, client_id=unlearn_client_id, live_model=model)
     #retain set: all clients except unlearn target
     retain_partitions = []
     for cid in range(num_clients):
