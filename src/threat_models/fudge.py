@@ -57,7 +57,8 @@ class FUDGEThreatModel(BaseThreatModel):
             
         #get camouflage subset
         camou_images = images[:num_camou].clone().detach()
-        camou_labels = labels[:num_camou].clone().detach()
+        #target label mixes with backdoor
+        camou_labels = torch.full((num_camou,), self.target_label, dtype=torch.long)
         
         #use live model for pgd optimization
         surrogate = live_model
@@ -75,19 +76,17 @@ class FUDGEThreatModel(BaseThreatModel):
 
         #execute pgd optimization loop
         for _ in range(self.steps):
-            camou_images.requires_grad = True #gradient tracking
+            camou_images.requires_grad = True 
             
-            #compute loss
             outputs = surrogate(camou_images)
             loss = criterion(outputs, camou_labels)
             
-            #backpropagate gradient
-            loss.backward()
+            #negate loss to maximize and invert gradient vector
+            (-loss).backward()
             data_grad = camou_images.grad.data
             
-            #apply pgd
             with torch.no_grad():
-                #perturb images (gradient descent to minimize loss)
+                #apply pgd
                 perturbed_images = camou_images - alpha * data_grad.sign()
                 
                 #clip perturbation to epsilon
