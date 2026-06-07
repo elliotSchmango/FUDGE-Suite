@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -A <your_allocation>  #replace
-#SBATCH -p a100
+#SBATCH -p gpu
 #SBATCH --gres=gpu:a100:1
 #SBATCH -c 8
 #SBATCH --mem=64G
