@@ -132,14 +132,14 @@ def main():
 
     #hpc config
     num_clients = 100
-    num_rounds = 20
+    num_rounds = 40
     malicious_client_id = "0"
     unlearn_client_id = "0"
     target_label = 0
     poison_ratio = 0.2
     partitions_path = "src/datasets/partitions.json"
     batch_size = 64
-    unlearn_epochs = 5
+    unlearn_epochs = 15
 
     #load CIFAR-10 dataset
     transform = transforms.Compose([
