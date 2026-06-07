@@ -90,13 +90,8 @@ class FUDGEClient(fl.client.NumPyClient):
         )
         self.model.to(device)
 
-        #dynamically generate camouflage over poisoned data using live weights
-        if str(self.cid) == str(self.malicious_client_id) and self.threat_model is not None:
-            train_dataset = self.threat_model.generate_camouflage(
-                self.poisoned_partition, client_id=self.cid, live_model=self.model
-            )
-        else:
-            train_dataset = self.poisoned_partition
+        #train on backdoor
+        train_dataset = self.poisoned_partition
 
         #record global params for FedProx proximal penalty
         proximal_mu = config.get("proximal_mu", None)
