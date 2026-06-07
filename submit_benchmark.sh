@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH -A <your_allocation>  #replace
-#SBATCH -p gpu
-#SBATCH --gres=gpu:1
+#SBATCH -p a100
+#SBATCH --gres=gpu:a100:1
 #SBATCH -c 8
 #SBATCH --mem=64G
-#SBATCH -t 04:00:00
+#SBATCH -t 02:00:00
 #SBATCH -J fudge_benchmark
 #SBATCH -o logs/run_%j.out
 #SBATCH -e logs/run_%j.err
@@ -14,7 +14,7 @@ mkdir -p logs
 
 #load UVA HPC modules
 module purge
-module load python/3.12.6
+module load python/3.11
 
 #install uv if not available
 if ! command -v uv &> /dev/null; then
