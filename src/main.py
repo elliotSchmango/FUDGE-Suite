@@ -15,6 +15,7 @@ from src.client import get_client_fn
 from src.datasets.dataset import ProgrammaticBackdoorDataset
 from src.threat_models.fudge import FUDGEThreatModel
 from src.audit.benchmarker import Benchmarker
+from src.audit.scorers import CleanAccuracyScorer, ASRScorer
 
 
 #get weights from model-state dictionary
@@ -70,62 +71,6 @@ def run_pga(model, unlearn_loader, retain_loader, epochs=20, lr=1e-3,
     return weights_from_model(model)
 
 
-#testing clean accuracy
-def evaluate_accuracy(weights, dataloader):
-    model = Net()
-    params_dict = zip(model.state_dict().keys(), weights)
-    state_dict = {k: torch.tensor(v) for k, v in params_dict}
-    model.load_state_dict(state_dict, strict=True)
-
-    device = torch.device(
-        "cuda" if torch.cuda.is_available()
-        else "mps" if torch.backends.mps.is_available()
-        else "cpu"
-    )
-    model.to(device)
-    model.eval()
-
-    correct, total = 0, 0
-    with torch.no_grad():
-        for images, labels in dataloader:
-            images, labels = images.to(device), labels.to(device)
-            outputs = model(images)
-            _, predicted = torch.max(outputs, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-
-    return correct / total if total > 0 else 0.0
-
-
-#calculate backdoor ASR
-def evaluate_asr(weights, dataloader, patch_size=3, target_label=0):
-    model = Net()
-    params_dict = zip(model.state_dict().keys(), weights)
-    state_dict = {k: torch.tensor(v) for k, v in params_dict}
-    model.load_state_dict(state_dict, strict=True)
-
-    device = torch.device(
-        "cuda" if torch.cuda.is_available()
-        else "mps" if torch.backends.mps.is_available()
-        else "cpu"
-    )
-    model.to(device)
-    model.eval()
-
-    correct, total = 0, 0
-    with torch.no_grad():
-        for images, labels in dataloader:
-            images = images.to(device)
-            #apply patch trigger
-            images[:, :, -patch_size:, -patch_size:] = 1.0
-            outputs = model(images)
-            _, predicted = torch.max(outputs, 1)
-            total += labels.size(0)
-            correct += (predicted == target_label).sum().item()
-
-    return correct / total if total > 0 else 0.0
-
-
 def main():
     #purge stale ray sessions
     ray.shutdown()
@@ -153,10 +98,16 @@ def main():
     )
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
+    #initialize standardized evaluation metrics
+    scorers = [
+        CleanAccuracyScorer(),
+        ASRScorer(target_label=target_label, patch_size=3)
+    ]
+
     #initialize Benchmarker instance
     benchmarker = Benchmarker(
         test_loader=test_loader,
-        target_label=target_label,
+        scorers=scorers,
     )
 
     #initialize threat model
@@ -172,10 +123,8 @@ def main():
     #define server evaluation function
     def evaluate_fn(server_round, parameters, config):
         weights = [np.copy(p) for p in parameters]
-        acc = evaluate_accuracy(weights, test_loader)
-        asr = evaluate_asr(weights, test_loader, target_label=target_label)
-        print(f"  [round {server_round}] acc={acc:.4f}  asr={asr:.4f}")
-        return 0.0, {"accuracy": acc, "asr": asr}
+        metrics = benchmarker.run_audit(weights, label=f"[round {server_round}]")
+        return 0.0, metrics
 
     #fudge strategy
     strategy = FUDGEStrategy(
