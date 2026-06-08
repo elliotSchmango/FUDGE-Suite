@@ -60,6 +60,7 @@ class FUDGEThreatModel(BaseThreatModel):
         #return patched dataset with original labels intact
         return TensorDataset(images, labels)
 
+
 if __name__ == "__main__":
     print("initializing FUDGE threat model test")
     
