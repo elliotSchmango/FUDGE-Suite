@@ -76,7 +76,7 @@ def main():
     ray.shutdown()
 
     #hpc config
-    num_clients = 100
+    num_clients = 50
     num_rounds = 50
     malicious_client_id = "0"
     unlearn_client_id = "0"
@@ -84,7 +84,7 @@ def main():
     poison_ratio = 0.2
     partitions_path = "src/datasets/partitions.json"
     batch_size = 64
-    unlearn_epochs = 3
+    unlearn_epochs = 10
 
     #load CIFAR-10 dataset
     transform = transforms.Compose([
@@ -128,7 +128,7 @@ def main():
 
     #fudge strategy
     strategy = FUDGEStrategy(
-        fraction_fit=0.1,
+        fraction_fit=0.2,
         fraction_evaluate=0.0,
         min_fit_clients=10,
         min_available_clients=num_clients,
@@ -212,7 +212,7 @@ def main():
         unlearn_loader,
         retain_loader,
         epochs=unlearn_epochs,
-        lr=0.005,
+        lr=0.01,
         projection_radius=2.0,
     )
 

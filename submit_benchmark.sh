@@ -30,7 +30,7 @@ uv sync
 
 #generate 100-client dirichlet partitions from CIFAR-10
 echo "generating 100-client partitions"
-uv run python src/datasets/dirichlet.py --num_clients 100
+uv run python src/datasets/dirichlet.py --num_clients 50
 
 #execute benchmark loop
 echo "executing main simulation loop"
