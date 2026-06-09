@@ -77,7 +77,7 @@ def main():
 
     #hpc config
     num_clients = 100
-    num_rounds = 40
+    num_rounds = 50
     malicious_client_id = "0"
     unlearn_client_id = "0"
     target_label = 0
