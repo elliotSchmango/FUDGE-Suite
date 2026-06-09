@@ -84,7 +84,7 @@ def main():
     poison_ratio = 0.2
     partitions_path = "src/datasets/partitions.json"
     batch_size = 64
-    unlearn_epochs = 15
+    unlearn_epochs = 3
 
     #load CIFAR-10 dataset
     transform = transforms.Compose([
