@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:a100:1
 #SBATCH -c 8
 #SBATCH --mem=64G
-#SBATCH -t 02:00:00
+#SBATCH -t 01:00:00
 #SBATCH -J fudge_benchmark
 #SBATCH -o logs/run_%j.out
 #SBATCH -e logs/run_%j.err
