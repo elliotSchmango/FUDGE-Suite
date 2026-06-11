@@ -7,3 +7,6 @@ src/**/*.pyc
 data/
 run_metrics.json
 validation_verification.md
+
+.DS_Store
+src/.DS_Store

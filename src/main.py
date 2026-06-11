@@ -78,13 +78,18 @@ def main():
     #hpc config
     num_clients = 50
     num_rounds = 50
+    attack_enabled = True
     malicious_client_id = "0"
     unlearn_client_id = "0"
     target_label = 0
     poison_ratio = 0.2
+    camou_ratio = 0.2
     partitions_path = "src/datasets/partitions.json"
     batch_size = 64
     unlearn_epochs = 10
+
+    #disable malicious client for control
+    effective_malicious_id = malicious_client_id if attack_enabled else None
 
     #load CIFAR-10 dataset
     transform = transforms.Compose([
@@ -114,6 +119,7 @@ def main():
     threat_model = FUDGEThreatModel(
         target_label=target_label,
         poison_ratio=poison_ratio,
+        camou_ratio=camou_ratio,
     )
 
     init_model = Net()
@@ -140,7 +146,7 @@ def main():
     client_fn = get_client_fn(
         base_dataset=base_dataset,
         partitions_path=partitions_path,
-        malicious_client_id=malicious_client_id,
+        malicious_client_id=effective_malicious_id,
         threat_model=threat_model,
         batch_size=batch_size,
     )
@@ -184,8 +190,8 @@ def main():
         partitions_path=partitions_path,
         base_dataset=base_dataset,
     )
-    #generate camouflage trap for pga target
-    unlearn_dataset = threat_model.generate_camouflage(raw_unlearn, client_id=unlearn_client_id, live_model=model)
+    #forget set is the camouflage subset the attacker requests to unlearn
+    unlearn_dataset = threat_model.get_forget_set(raw_unlearn, client_id=unlearn_client_id)
     #retain set: all clients except unlearn target
     retain_partitions = []
     for cid in range(num_clients):
@@ -223,6 +229,9 @@ def main():
         config={
             "num_rounds": num_rounds,
             "num_clients": num_clients,
+            "attack_enabled": attack_enabled,
+            "poison_ratio": poison_ratio,
+            "camou_ratio": camou_ratio,
             "unlearning_method": "pga",
             "unlearn_epochs": unlearn_epochs,
         },

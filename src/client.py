@@ -63,11 +63,12 @@ class FUDGEClient(fl.client.NumPyClient):
             base_dataset=base_dataset,
         )
 
-        #poison data if client is malicious (static patch)
+        #malicious client trains on dual injection (clean + backdoor + camouflage)
+        #camouflage suppresses backdoor expression so global model looks clean pre-unlearn
         if str(cid) == str(malicious_client_id) and threat_model is not None:
-            self.poisoned_partition = threat_model.poison_dataset(self.partition, client_id=cid)
+            self.train_partition = threat_model.build_malicious_trainset(self.partition, client_id=cid)
         else:
-            self.poisoned_partition = self.partition
+            self.train_partition = self.partition
 
     #return weights as numpy arrays
     def get_parameters(self, config=None):
@@ -90,8 +91,8 @@ class FUDGEClient(fl.client.NumPyClient):
         )
         self.model.to(device)
 
-        #train on backdoor
-        train_dataset = self.poisoned_partition
+        #train on dual-injected set for malicious client, clean partition otherwise
+        train_dataset = self.train_partition
 
         #record global params for FedProx proximal penalty
         proximal_mu = config.get("proximal_mu", None)
@@ -127,10 +128,5 @@ class FUDGEClient(fl.client.NumPyClient):
                 loss.backward()
                 optimizer.step()
 
-        #amplify malicious update
-        if str(self.cid) == str(self.malicious_client_id):
-            amplification_factor = 10.0
-            for p, g in zip(self.model.parameters(), global_params):
-                p.data = g.to(device) + (p.data - g.to(device)) * amplification_factor
-
+        #no amplification: BadFU relies on gradient cancellation, not overpowering aggregate
         return self.get_parameters(), len(train_dataset), {}
