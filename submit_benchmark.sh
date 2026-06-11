@@ -28,9 +28,14 @@ echo "syncing project environment"
 uv venv .venv
 uv sync
 
-#generate 100-client dirichlet partitions from CIFAR-10
-echo "generating 100-client partitions"
-uv run python src/datasets/dirichlet.py --num_clients 50
+#generate 50-client dirichlet partitions from CIFAR-10 only if missing
+#regenerating each run would break cross-arm comparability
+if [ ! -f src/datasets/partitions.json ]; then
+    echo "generating 50-client partitions"
+    uv run python src/datasets/dirichlet.py --num_clients 50 --seed 42
+else
+    echo "reusing existing partitions.json"
+fi
 
 #execute benchmark loop
 echo "executing main simulation loop"

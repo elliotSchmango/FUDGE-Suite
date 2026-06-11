@@ -3,11 +3,14 @@ import json
 import os
 import numpy as np
 
-def generate_dirichlet_partitions(targets, num_clients, alpha, output_path):
+def generate_dirichlet_partitions(targets, num_clients, alpha, output_path, seed=42):
+    #seeding for reproducibility
+    np.random.seed(seed)
+
     #get unique labels
     unique_labels = np.unique(targets)
     num_classes = len(unique_labels)
-    
+
     #initialize dict for client indices
     client_indices = {str(i): [] for i in range(num_clients)}
     
@@ -35,8 +38,11 @@ def generate_dirichlet_partitions(targets, num_clients, alpha, output_path):
             client_indices[str(i)].extend(idx_k[current_idx:current_idx + proportions[i]].tolist())
             current_idx += proportions[i]
 
+    #record params
+    client_indices["_meta"] = {"seed": seed, "num_clients": num_clients, "alpha": alpha}
+
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
+
     with open(output_path, "w") as f:
         json.dump(client_indices, f, indent=4)
 
@@ -47,6 +53,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_clients", type=int, default=10)
     parser.add_argument("--alpha", type=float, default=0.25)
+    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output", type=str, default="src/datasets/partitions.json")
     args = parser.parse_args()
 
@@ -60,5 +67,6 @@ if __name__ == "__main__":
         num_clients=args.num_clients,
         alpha=args.alpha,
         output_path=args.output,
+        seed=args.seed,
     )
     print(f"saved {args.num_clients}-client partitions to {args.output}")
