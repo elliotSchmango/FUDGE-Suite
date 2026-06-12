@@ -73,7 +73,6 @@ def run_pga(model, unlearn_loader, retain_loader, epochs=20, lr=1e-3,
 
 
 def main():
-    #purge stale ray sessions
     ray.shutdown()
 
     #hpc config
@@ -84,21 +83,21 @@ def main():
     unlearn_client_id = "0"
     target_label = 0
     poison_ratio = 0.2
-    camou_ratio = 0.2
+    camou_ratio = 0.0
     partitions_path = "src/datasets/partitions.json"
     batch_size = 64
 
     #pga unlearning
-    unlearn_epochs = 30
+    unlearn_epochs = 10
     unlearn_lr = 0.01
-    projection_radius = 5.0
-    retain_enabled = False
+    projection_radius = 2.0
+    retain_enabled = True
 
-    #cache trained weights to skip expensive fl retrain during pga tuning
+    #cache trained weights
     use_cached_weights = False
     weights_cache_path = "cached_weights.npz"
 
-    #disable malicious client for control
+    #disable malicious client
     effective_malicious_id = malicious_client_id if attack_enabled else None
 
     #load CIFAR-10 dataset
@@ -132,7 +131,7 @@ def main():
         camou_ratio=camou_ratio,
     )
 
-    #get trained global weights from cache or fresh federated training
+    #get trained global weights from either cache or fresh federated training
     if use_cached_weights and os.path.exists(weights_cache_path):
         print(f"loading cached global weights from {weights_cache_path}")
         cache = np.load(weights_cache_path, allow_pickle=True)
@@ -142,7 +141,7 @@ def main():
         init_weights = [val.cpu().numpy() for _, val in init_model.state_dict().items()]
         init_parameters = ndarrays_to_parameters(init_weights)
 
-        #define server evaluation function
+        #define server eval function
         def evaluate_fn(server_round, parameters, config):
             weights = [np.copy(p) for p in parameters]
             metrics = benchmarker.run_audit(weights, label=f"[round {server_round}]")
