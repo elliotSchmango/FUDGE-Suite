@@ -156,6 +156,7 @@ def main():
             min_available_clients=num_clients,
             evaluate_fn=evaluate_fn,
             initial_parameters=init_parameters,
+            malicious_client_id=effective_malicious_id,
         )
 
         #initializing clients
