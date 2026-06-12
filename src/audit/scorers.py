@@ -1,6 +1,8 @@
 import torch
 from abc import ABC, abstractmethod
 
+from src.registry import register_scorer
+
 
 #base scorer interface
 class BaseScorer(ABC):
@@ -36,6 +38,11 @@ class CleanAccuracyScorer(BaseScorer):
         return correct / total
 
 
+@register_scorer("accuracy")
+def build_accuracy(config):
+    return CleanAccuracyScorer()
+
+
 #compute backdoor attack success
 class ASRScorer(BaseScorer):
     def __init__(self, target_label: int, patch_size: int = 3):
@@ -62,3 +69,8 @@ class ASRScorer(BaseScorer):
         if not total:
             return 0.0
         return correct / total
+
+
+@register_scorer("asr")
+def build_asr(config):
+    return ASRScorer(target_label=config.target_label, patch_size=config.patch_size)

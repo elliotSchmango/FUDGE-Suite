@@ -3,13 +3,14 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, TensorDataset
 from .base import BaseThreatModel
+from src.registry import register_threat_model
 
 #define FUDGE threat model
+@register_threat_model("fudge")
 class FUDGEThreatModel(BaseThreatModel):
     #config
-    def __init__(self, target_label: int, poison_ratio: float, camou_ratio: float = 0.2,
-                 epsilon: float = 8.0/255.0, steps: int = 40):
-        super().__init__(target_label, poison_ratio, epsilon, steps)
+    def __init__(self, target_label: int, poison_ratio: float, camou_ratio: float = 0.2):
+        super().__init__(target_label, poison_ratio)
         self.camou_ratio = camou_ratio
         self.patch_size = 3
 
