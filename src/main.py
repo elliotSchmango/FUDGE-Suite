@@ -83,7 +83,7 @@ def main():
     unlearn_client_id = "0"
     target_label = 0
     poison_ratio = 0.2
-    camou_ratio = 0.0
+    camou_ratio = 0.2
     amplification_factor = 4.0
     partitions_path = "src/datasets/partitions.json"
     batch_size = 64
