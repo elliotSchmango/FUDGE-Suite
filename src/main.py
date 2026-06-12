@@ -88,11 +88,11 @@ def main():
     partitions_path = "src/datasets/partitions.json"
     batch_size = 64
 
-    #pga unlearning 
-    unlearn_epochs = 10
+    #pga unlearning
+    unlearn_epochs = 30
     unlearn_lr = 0.01
-    projection_radius = 2.0
-    retain_enabled = True
+    projection_radius = 5.0
+    retain_enabled = False
 
     #cache trained weights to skip expensive fl retrain during pga tuning
     use_cached_weights = False
