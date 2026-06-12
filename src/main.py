@@ -1,4 +1,5 @@
 import json
+import os
 import numpy as np
 import torch
 import torchvision
@@ -31,7 +32,7 @@ def run_pga(model, unlearn_loader, retain_loader, epochs=20, lr=1e-3,
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.0)
     reference_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
 
-    retain_iter = iter(retain_loader)
+    retain_iter = iter(retain_loader) if retain_loader is not None else None
 
     model.train()
     for epoch in range(epochs):
@@ -86,7 +87,16 @@ def main():
     camou_ratio = 0.2
     partitions_path = "src/datasets/partitions.json"
     batch_size = 64
+
+    #pga unlearning 
     unlearn_epochs = 10
+    unlearn_lr = 0.01
+    projection_radius = 2.0
+    retain_enabled = True
+
+    #cache trained weights to skip expensive fl retrain during pga tuning
+    use_cached_weights = False
+    weights_cache_path = "cached_weights.npz"
 
     #disable malicious client for control
     effective_malicious_id = malicious_client_id if attack_enabled else None
@@ -122,58 +132,70 @@ def main():
         camou_ratio=camou_ratio,
     )
 
-    init_model = Net()
-    init_weights = [val.cpu().numpy() for _, val in init_model.state_dict().items()]
-    init_parameters = ndarrays_to_parameters(init_weights)
+    #get trained global weights from cache or fresh federated training
+    if use_cached_weights and os.path.exists(weights_cache_path):
+        print(f"loading cached global weights from {weights_cache_path}")
+        cache = np.load(weights_cache_path, allow_pickle=True)
+        global_weights = [cache[f"arr_{i}"] for i in range(len(cache.files))]
+    else:
+        init_model = Net()
+        init_weights = [val.cpu().numpy() for _, val in init_model.state_dict().items()]
+        init_parameters = ndarrays_to_parameters(init_weights)
 
-    #define server evaluation function
-    def evaluate_fn(server_round, parameters, config):
-        weights = [np.copy(p) for p in parameters]
-        metrics = benchmarker.run_audit(weights, label=f"[round {server_round}]")
-        return 0.0, metrics
+        #define server evaluation function
+        def evaluate_fn(server_round, parameters, config):
+            weights = [np.copy(p) for p in parameters]
+            metrics = benchmarker.run_audit(weights, label=f"[round {server_round}]")
+            return 0.0, metrics
 
-    #fudge strategy
-    strategy = FUDGEStrategy(
-        fraction_fit=0.2,
-        fraction_evaluate=0.0,
-        min_fit_clients=10,
-        min_available_clients=num_clients,
-        evaluate_fn=evaluate_fn,
-        initial_parameters=init_parameters,
-    )
+        #fudge strategy
+        strategy = FUDGEStrategy(
+            fraction_fit=0.2,
+            fraction_evaluate=0.0,
+            min_fit_clients=10,
+            min_available_clients=num_clients,
+            evaluate_fn=evaluate_fn,
+            initial_parameters=init_parameters,
+        )
 
-    #initializing clients
-    client_fn = get_client_fn(
-        base_dataset=base_dataset,
-        partitions_path=partitions_path,
-        malicious_client_id=effective_malicious_id,
-        threat_model=threat_model,
-        batch_size=batch_size,
-    )
+        #initializing clients
+        client_fn = get_client_fn(
+            base_dataset=base_dataset,
+            partitions_path=partitions_path,
+            malicious_client_id=effective_malicious_id,
+            threat_model=threat_model,
+            batch_size=batch_size,
+        )
 
-    #start flwr simulation on HPC
-    print("starting flwr simulation on cluster node")
-    fl.simulation.start_simulation(
-        client_fn=client_fn,
-        num_clients=num_clients,
-        config=fl.server.ServerConfig(num_rounds=num_rounds),
-        strategy=strategy,
-        client_resources={"num_cpus": 0.8, "num_gpus": 0.1},
-        ray_init_args={
-            "num_cpus": 8,
-            "num_gpus": 1,
-            "runtime_env": {"excludes": [".venv/", "data/", "__pycache__/"]}
-        },
-    )
+        #start flwr simulation on HPC
+        print("starting flwr simulation on cluster node")
+        fl.simulation.start_simulation(
+            client_fn=client_fn,
+            num_clients=num_clients,
+            config=fl.server.ServerConfig(num_rounds=num_rounds),
+            strategy=strategy,
+            client_resources={"num_cpus": 0.8, "num_gpus": 0.1},
+            ray_init_args={
+                "num_cpus": 8,
+                "num_gpus": 1,
+                "runtime_env": {"excludes": [".venv/", "data/", "__pycache__/"]}
+            },
+        )
 
-    if strategy.global_weights is None:
-        raise RuntimeError("federated training failed to produce global weights")
+        if strategy.global_weights is None:
+            raise RuntimeError("federated training failed to produce global weights")
+
+        global_weights = strategy.global_weights
+
+        #cache weights so pga tuning skips retraining next time
+        np.savez(weights_cache_path, *global_weights)
+        print(f"cached global weights to {weights_cache_path}")
 
     print("\nfederated training complete. starting unlearning phase.")
 
     #load trained model
     model = Net()
-    params_dict = zip(model.state_dict().keys(), strategy.global_weights)
+    params_dict = zip(model.state_dict().keys(), global_weights)
     state_dict = {k: torch.tensor(v) for k, v in params_dict}
     model.load_state_dict(state_dict, strict=True)
 
@@ -210,16 +232,16 @@ def main():
     retain_loader = DataLoader(retain_dataset, batch_size=batch_size, shuffle=True)
 
     #record pre-unlearning weights for benchmarker
-    pre_weights = strategy.global_weights
+    pre_weights = global_weights
 
-    #run pga unlearning
+    #run pga unlearning; retain stabilization toggled by retain_enabled
     post_weights = run_pga(
         model,
         unlearn_loader,
-        retain_loader,
+        retain_loader if retain_enabled else None,
         epochs=unlearn_epochs,
-        lr=0.01,
-        projection_radius=2.0,
+        lr=unlearn_lr,
+        projection_radius=projection_radius,
     )
 
     #telemetry report with benchmarker
@@ -234,6 +256,9 @@ def main():
             "camou_ratio": camou_ratio,
             "unlearning_method": "pga",
             "unlearn_epochs": unlearn_epochs,
+            "unlearn_lr": unlearn_lr,
+            "projection_radius": projection_radius,
+            "retain_enabled": retain_enabled,
         },
     )
 
