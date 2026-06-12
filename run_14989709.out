@@ -1,0 +1,59 @@
+syncing project environment
+generating 50-client partitions
+saved 50-client partitions to src/datasets/partitions.json
+executing main simulation loop
+starting flwr simulation on cluster node
+[round 0] -> accuracy=0.1019  asr=0.0000
+[round 1] -> accuracy=0.1358  asr=0.0000
+[round 2] -> accuracy=0.1822  asr=0.0000
+[round 3] -> accuracy=0.2647  asr=0.0978
+[round 4] -> accuracy=0.2691  asr=0.0837
+[round 5] -> accuracy=0.3309  asr=0.0001
+[round 6] -> accuracy=0.3402  asr=0.1893
+[round 7] -> accuracy=0.4023  asr=0.1692
+[round 8] -> accuracy=0.4214  asr=0.0799
+[round 9] -> accuracy=0.3648  asr=0.0751
+[round 10] -> accuracy=0.4442  asr=0.1080
+[round 11] -> accuracy=0.4085  asr=0.0247
+[round 12] -> accuracy=0.4563  asr=0.2073
+[round 13] -> accuracy=0.4681  asr=0.1467
+[round 14] -> accuracy=0.4578  asr=0.1238
+[round 15] -> accuracy=0.4587  asr=0.1400
+[round 16] -> accuracy=0.4329  asr=0.0274
+[round 17] -> accuracy=0.3979  asr=0.0816
+[round 18] -> accuracy=0.4899  asr=0.0620
+[round 19] -> accuracy=0.5020  asr=0.0677
+[round 20] -> accuracy=0.5005  asr=0.0418
+[round 21] -> accuracy=0.5687  asr=0.0591
+[round 22] -> accuracy=0.4861  asr=0.3010
+[round 23] -> accuracy=0.4863  asr=0.0162
+[round 24] -> accuracy=0.4980  asr=0.0239
+[round 25] -> accuracy=0.5352  asr=0.1175
+[round 26] -> accuracy=0.5579  asr=0.1736
+[round 27] -> accuracy=0.5312  asr=0.0505
+[round 28] -> accuracy=0.5777  asr=0.0817
+[round 29] -> accuracy=0.5567  asr=0.1700
+[round 30] -> accuracy=0.5552  asr=0.0501
+[round 31] -> accuracy=0.4923  asr=0.1137
+[round 32] -> accuracy=0.5655  asr=0.0480
+[round 33] -> accuracy=0.5590  asr=0.1046
+[round 34] -> accuracy=0.5534  asr=0.0488
+[round 35] -> accuracy=0.5463  asr=0.0576
+[round 36] -> accuracy=0.5583  asr=0.0517
+[round 37] -> accuracy=0.5878  asr=0.0907
+[round 38] -> accuracy=0.5194  asr=0.0209
+[round 39] -> accuracy=0.5699  asr=0.2043
+[round 40] -> accuracy=0.5541  asr=0.0489
+[round 41] -> accuracy=0.5896  asr=0.0688
+[round 42] -> accuracy=0.5371  asr=0.1722
+[round 43] -> accuracy=0.4655  asr=0.0334
+[round 44] -> accuracy=0.5928  asr=0.2718
+[round 45] -> accuracy=0.5594  asr=0.2604
+[round 46] -> accuracy=0.5881  asr=0.0457
+[round 47] -> accuracy=0.5859  asr=0.1525
+[round 48] -> accuracy=0.5445  asr=0.2097
+[round 49] -> accuracy=0.5651  asr=0.1095
+[round 50] -> accuracy=0.5894  asr=0.1174
+cached global weights to cached_weights.npz
+
+federated training complete. starting unlearning phase.

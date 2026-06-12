@@ -16,6 +16,7 @@ def get_client_fn( #define global vars
     batch_size: int = 32,
     lr: float = 0.01,
     momentum: float = 0.9,
+    amplification_factor: float = 1.0,
 ):
     #pass global variables to client instance
     def client_fn(cid: str):
@@ -29,6 +30,7 @@ def get_client_fn( #define global vars
             batch_size=batch_size,
             lr=lr,
             momentum=momentum,
+            amplification_factor=amplification_factor,
         )
     return client_fn
 
@@ -46,6 +48,7 @@ class FUDGEClient(fl.client.NumPyClient):
         batch_size: int,
         lr: float,
         momentum: float,
+        amplification_factor: float = 1.0,
     ):
         self.cid = cid
         self.local_epochs = local_epochs
@@ -55,6 +58,7 @@ class FUDGEClient(fl.client.NumPyClient):
         self.model = Net()
         self.malicious_client_id = malicious_client_id
         self.threat_model = threat_model
+        self.amplification_factor = amplification_factor
 
         #build client partition from index map
         self.partition = ProgrammaticBackdoorDataset(
@@ -63,8 +67,7 @@ class FUDGEClient(fl.client.NumPyClient):
             base_dataset=base_dataset,
         )
 
-        #malicious client trains on dual injection (clean + backdoor + camouflage)
-        #camouflage suppresses backdoor expression so global model looks clean pre-unlearn
+        #malicious client trains on clean + backdoor + camouflage
         if str(cid) == str(malicious_client_id) and threat_model is not None:
             self.train_partition = threat_model.build_malicious_trainset(self.partition, client_id=cid)
         else:
@@ -91,7 +94,7 @@ class FUDGEClient(fl.client.NumPyClient):
         )
         self.model.to(device)
 
-        #train on dual-injected set for malicious client, clean partition otherwise
+        #train as described above
         train_dataset = self.train_partition
 
         #record global params for FedProx proximal penalty
@@ -128,5 +131,9 @@ class FUDGEClient(fl.client.NumPyClient):
                 loss.backward()
                 optimizer.step()
 
-        #no amplification: BadFU relies on gradient cancellation, not overpowering aggregate
+        #scale malicious update to survive fedavg dilution (model-replacement)
+        if str(self.cid) == str(self.malicious_client_id) and self.amplification_factor != 1.0:
+            for p, g in zip(self.model.parameters(), global_params):
+                p.data = g.to(device) + (p.data - g.to(device)) * self.amplification_factor
+
         return self.get_parameters(), len(train_dataset), {}

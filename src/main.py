@@ -84,6 +84,7 @@ def main():
     target_label = 0
     poison_ratio = 0.2
     camou_ratio = 0.0
+    amplification_factor = 4.0
     partitions_path = "src/datasets/partitions.json"
     batch_size = 64
 
@@ -164,6 +165,7 @@ def main():
             malicious_client_id=effective_malicious_id,
             threat_model=threat_model,
             batch_size=batch_size,
+            amplification_factor=amplification_factor,
         )
 
         #start flwr simulation on HPC
@@ -253,6 +255,7 @@ def main():
             "attack_enabled": attack_enabled,
             "poison_ratio": poison_ratio,
             "camou_ratio": camou_ratio,
+            "amplification_factor": amplification_factor,
             "unlearning_method": "pga",
             "unlearn_epochs": unlearn_epochs,
             "unlearn_lr": unlearn_lr,
