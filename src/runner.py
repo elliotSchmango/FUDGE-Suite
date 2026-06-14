@@ -36,13 +36,16 @@ def _load_model(weights, device):
 
 
 #build forget set (attacker-defined) and retain set (all other clients)
-def _build_unlearn_loaders(config, base_dataset, threat_model):
+def _build_unlearn_loaders(config, base_dataset, threat_model, model, device):
     raw_unlearn = ProgrammaticBackdoorDataset(
         client_id=config.unlearn_client_id,
         partitions_path=config.partitions_path,
         base_dataset=base_dataset,
     )
-    forget_dataset = threat_model.get_forget_set(raw_unlearn, client_id=config.unlearn_client_id)
+    #model-aware forget set (but influence-based attacks use the trained model)
+    forget_dataset = threat_model.build_forget_set(
+        raw_unlearn, model=model, device=device, client_id=config.unlearn_client_id
+    )
 
     retain_partitions = []
     for cid in range(config.num_clients):
@@ -76,12 +79,12 @@ def run_experiment(config):
     )
     test_loader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
 
-    #standardized evaluation suite
-    scorers = registry.build_scorers(config)
-    benchmarker = Benchmarker(test_loader=test_loader, scorers=scorers)
-
-    #threat model only instantiated when an attack is active
+    #threat model first so scorers can match its trigger
     threat_model = registry.build_threat_model(config) if config.attack_enabled else None
+
+    #standardized eval suite
+    scorers = registry.build_scorers(config, threat_model)
+    benchmarker = Benchmarker(test_loader=test_loader, scorers=scorers)
 
     #get attacked global weights from either cache or fresh federated training
     strategy = None
@@ -100,7 +103,7 @@ def run_experiment(config):
         np.savez(config.weights_cache_path, *global_weights)
         print(f"cached global weights to {config.weights_cache_path}")
 
-    #control baseline: retrain from scratch with the attack disabled
+    #control baseline, retrain from scratch with attack disabled
     rfs_metrics = None
     if config.run_rfs_baseline:
         print("\nrunning retrain-from-scratch control baseline")
@@ -113,9 +116,11 @@ def run_experiment(config):
     model = _load_model(global_weights, device)
 
     #forget and retain loaders defined by the active threat model
-    forget_loader, retain_loader = _build_unlearn_loaders(config, base_dataset, threat_model)
+    forget_loader, retain_loader = _build_unlearn_loaders(
+        config, base_dataset, threat_model, model, device
+    )
 
-    #side data for unlearners that need it (history_cache only available on fresh runs)
+    #side data for unlearners
     context = UnlearnContext(
         global_weights=global_weights,
         num_clients=config.num_clients,
@@ -124,7 +129,7 @@ def run_experiment(config):
         history_cache=strategy.history_cache if strategy is not None else {},
     )
 
-    #run the selected unlearning algorithm
+    #run selected unlearning algorithm
     unlearner = registry.build_unlearner(config)
     post_weights = unlearner.unlearn(model, forget_loader, retain_loader, context)
 

@@ -45,13 +45,18 @@ def build_unlearner(config):
     return cls(**config.unlearner_args)
 
 
-#build scorer list from config selection
-def build_scorers(config):
-    return [SCORERS[name](config) for name in config.scorers]
+#build scorers, threat model supplies live trigger
+def build_scorers(config, threat_model=None):
+    return [SCORERS[name](config, threat_model) for name in config.scorers]
 
 
 #import implementation modules
 def import_builtins():
-    from src.threat_models import fudge
+    from src.threat_models import badfu_attack
+    from src.threat_models import badnets_attack
+    from src.threat_models import neurotoxin_attack
+    from src.threat_models import dba_attack
+    from src.threat_models import edgecase_attack
+    from src.threat_models import fedmua_attack
     from src.unlearning import pga
     from src.audit import scorers

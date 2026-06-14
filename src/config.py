@@ -12,7 +12,7 @@ PARTITIONS_PATH = "src/datasets/partitions.json"
 @dataclass
 class ExperimentConfig:
     #plug-and-play
-    threat_model: str = "fudge"
+    threat_model: str = "badfu"
     threat_model_args: Dict[str, Any] = field(default_factory=lambda: {"camou_ratio": 0.2})
     unlearner: str = "pga"
     unlearner_args: Dict[str, Any] = field(default_factory=lambda: {

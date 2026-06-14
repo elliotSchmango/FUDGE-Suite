@@ -2,6 +2,7 @@ workflow_info/
 design_log_instructions.txt
 design_log.md
 .venv/
+notes_for_fudge_paper.md
 
 src/**/*.pyc
 data/
