@@ -45,3 +45,16 @@ class ExperimentConfig:
     use_cached_weights: bool = False
     weights_cache_path: str = "cached_weights.npz"
     output_path: str = "run_metrics.json"
+
+
+#cheap end-to-end validation, few rounds, one simple attack, keeps 50-client topology
+def test_config():
+    return ExperimentConfig(
+        threat_model="badnets",
+        threat_model_args={},
+        scorers=["accuracy", "asr"],
+        num_rounds=2,
+        unlearner_args={"epochs": 2, "lr": 0.01, "projection_radius": 2.0, "retain_enabled": True},
+        weights_cache_path="test_weights.npz",
+        output_path="test_metrics.json",
+    )

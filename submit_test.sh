@@ -4,10 +4,10 @@
 #SBATCH --gres=gpu:a100:1
 #SBATCH -c 8
 #SBATCH --mem=64G
-#SBATCH -t 01:00:00
-#SBATCH -J fudge_benchmark
-#SBATCH -o logs/run_%j.out
-#SBATCH -e logs/run_%j.err
+#SBATCH -t 00:20:00
+#SBATCH -J fudge_test
+#SBATCH -o logs/test_%j.out
+#SBATCH -e logs/test_%j.err
 
 #create logs directory if missing
 mkdir -p logs
@@ -28,8 +28,7 @@ echo "syncing project environment"
 uv venv .venv
 uv sync
 
-#generate 50-client dirichlet partitions from CIFAR-10 only if missing
-#regenerating each run would break cross-arm comparability
+#generate 50-client dirichlet partitions only if missing
 if [ ! -f src/datasets/partitions.json ]; then
     echo "generating 50-client partitions"
     uv run python src/datasets/dirichlet.py --num_clients 50 --seed 42
@@ -37,6 +36,6 @@ else
     echo "reusing existing partitions.json"
 fi
 
-#execute full roster benchmark loop
-echo "executing main simulation loop"
-uv run python -m src.main --mode benchmark
+#cheap end-to-end validation before committing a100 hours to the full sweep
+echo "running test validation"
+uv run python -m src.main --mode test
