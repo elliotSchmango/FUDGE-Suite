@@ -4,26 +4,36 @@ import flwr as fl
 from flwr.common import parameters_to_ndarrays, ndarrays_to_parameters
 
 class FUDGEStrategy(fl.server.strategy.FedAvg):
-    def __init__(self, *args, malicious_client_id=None, **kwargs):
+    def __init__(self, *args, malicious_client_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.global_weights = None
         self.history_cache = {}
-        self.malicious_client_id = malicious_client_id
+        self.malicious_client_ids = [str(c) for c in (malicious_client_ids or [])]
 
     def configure_fit(self, server_round, parameters, client_manager):
         #fedavg sampling
-        client_config_pairs = super().configure_fit(server_round, parameters, client_manager)
+        pairs = super().configure_fit(server_round, parameters, client_manager)
 
-        #force persistent attacker into every round
-        if self.malicious_client_id is not None and client_config_pairs:
-            all_clients = client_manager.all()
-            mal_proxy = all_clients.get(str(self.malicious_client_id))
-            sampled_cids = {client.cid for client, _ in client_config_pairs}
-            if mal_proxy is not None and str(self.malicious_client_id) not in sampled_cids:
-                fit_ins = client_config_pairs[0][1]
-                client_config_pairs[0] = (mal_proxy, fit_ins)
+        #force every saboteur into the round, each in its own slot
+        if not self.malicious_client_ids or not pairs:
+            return pairs
 
-        return client_config_pairs
+        all_clients = client_manager.all()
+        sampled = {client.cid for client, _ in pairs}
+        slot = 0
+        for mid in self.malicious_client_ids:
+            if mid in sampled:
+                continue
+            proxy = all_clients.get(mid)
+            if proxy is None:
+                continue
+            pairs[slot] = (proxy, pairs[slot][1])
+            sampled.add(mid)
+            slot += 1
+            if slot >= len(pairs):
+                break
+
+        return pairs
 
     def aggregate_fit(self, server_round, results, failures):
         #run FedAvg

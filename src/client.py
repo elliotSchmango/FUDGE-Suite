@@ -5,20 +5,20 @@ import flwr as fl
 from torch.utils.data import DataLoader
 from src.models.model import Net
 from src.datasets.dataset import ProgrammaticBackdoorDataset
-from src.threat_models.fudge import FUDGEThreatModel
+from src.threat_models.base import BaseThreatModel
 
-def get_client_fn( #define global vars
+def get_client_fn(
     base_dataset,
     partitions_path: str,
     malicious_client_id: str = "0",
-    threat_model: FUDGEThreatModel = None,
+    threat_model: BaseThreatModel = None,
     local_epochs: int = 5,
     batch_size: int = 32,
     lr: float = 0.01,
     momentum: float = 0.9,
     amplification_factor: float = 1.0,
 ):
-    #pass global variables to client instance
+    #pass variables to client instance
     def client_fn(cid: str):
         return FUDGEClient(
             cid=cid,
@@ -43,7 +43,7 @@ class FUDGEClient(fl.client.NumPyClient):
         base_dataset,
         partitions_path: str,
         malicious_client_id: str,
-        threat_model: FUDGEThreatModel,
+        threat_model: BaseThreatModel,
         local_epochs: int,
         batch_size: int,
         lr: float,
@@ -67,8 +67,13 @@ class FUDGEClient(fl.client.NumPyClient):
             base_dataset=base_dataset,
         )
 
-        #malicious client trains on clean + backdoor + camouflage
-        if str(cid) == str(malicious_client_id) and threat_model is not None:
+        #threat model picks which clients attack
+        #single id by default, a set for DBA
+        self.is_malicious = (
+            threat_model is not None
+            and threat_model.is_malicious(cid, malicious_client_id)
+        )
+        if self.is_malicious:
             self.train_partition = threat_model.build_malicious_trainset(self.partition, client_id=cid)
         else:
             self.train_partition = self.partition
@@ -120,7 +125,7 @@ class FUDGEClient(fl.client.NumPyClient):
                 outputs = self.model(images)
                 loss = criterion(outputs, labels)
 
-                #FedProx formula: (mu/2) * ||w - w_global||^2
+                #FedProx penalty (mu/2) * ||w - w_global||^2
                 if proximal_mu is not None:
                     prox = sum(
                         torch.sum((p - g.to(device)) ** 2)
@@ -131,9 +136,12 @@ class FUDGEClient(fl.client.NumPyClient):
                 loss.backward()
                 optimizer.step()
 
-        #scale malicious update to survive fedavg dilution (model-replacement)
-        if str(self.cid) == str(self.malicious_client_id) and self.amplification_factor != 1.0:
-            for p, g in zip(self.model.parameters(), global_params):
-                p.data = g.to(device) + (p.data - g.to(device)) * self.amplification_factor
+        #threat model shapes malicious update while clean partition is the benign reference
+        if self.is_malicious:
+            clean_loader = DataLoader(self.partition, batch_size=self.batch_size, shuffle=True)
+            self.threat_model.craft_malicious_update(
+                self.model, global_params, device, self.amplification_factor,
+                clean_loader=clean_loader, criterion=criterion,
+            )
 
         return self.get_parameters(), len(train_dataset), {}

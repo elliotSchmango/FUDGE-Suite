@@ -16,6 +16,12 @@ def federated_train(config, base_dataset, threat_model, benchmarker,
     #disable the attacker when retraining from scratch
     effective_malicious_id = config.malicious_client_id if attack_enabled else None
 
+    #saboteurs the strategy forces in, empty when no attack
+    if attack_enabled and threat_model is not None:
+        mal_ids = threat_model.malicious_client_ids(config.malicious_client_id)
+    else:
+        mal_ids = []
+
     init_model = Net()
     init_weights = [val.cpu().numpy() for _, val in init_model.state_dict().items()]
     init_parameters = ndarrays_to_parameters(init_weights)
@@ -33,7 +39,7 @@ def federated_train(config, base_dataset, threat_model, benchmarker,
         min_available_clients=config.num_clients,
         evaluate_fn=evaluate_fn,
         initial_parameters=init_parameters,
-        malicious_client_id=effective_malicious_id,
+        malicious_client_ids=mal_ids,
     )
 
     client_fn = get_client_fn(
