@@ -1,3 +1,4 @@
+import os
 import json
 from dataclasses import replace
 
@@ -23,7 +24,7 @@ def default_roster():
     ]
 
 
-#distinction between asr vs misclassification threat types
+#asr vs misclassification metric key
 def _attack_metric(report):
     for m in ("asr", "misclassification"):
         if f"post_unlearn_{m}" in report:
@@ -31,7 +32,8 @@ def _attack_metric(report):
     return None
 
 
-#gap-to-rfs
+#gap-to-rfs profile across attacks
+def _aggregate(results):
     rows = {}
     for attack, report in results.items():
         m = _attack_metric(report)
@@ -57,17 +59,56 @@ def _attack_metric(report):
     return {"per_attack": rows, "summary": summary}
 
 
-#run the full roster for one unlearner
+#per-attack config, own output and weight cache so array tasks never clobber each other
+def attack_config(attack_name, base_config=None, roster=None):
+    base_config = base_config or ExperimentConfig()
+    roster = roster or default_roster()
+    spec = next((s for s in roster if s["threat_model"] == attack_name), None)
+    if spec is None:
+        raise ValueError(f"unknown attack {attack_name}")
+    return replace(
+        base_config,
+        output_path=f"metrics_{attack_name}.json",
+        weights_cache_path=f"cache_{attack_name}.npz",
+        **spec,
+    )
+
+
+#run one attack end to end, one slurm array task
+def run_single_attack(attack_name, base_config=None):
+    cfg = attack_config(attack_name, base_config)
+    print(f"\n===== attack {attack_name} (unlearner={cfg.unlearner}) =====")
+    return run_experiment(cfg)
+
+
+#fold the per-attack metric files into the summary profile
+def aggregate_from_files(roster=None, output_path="benchmark_metrics.json"):
+    roster = roster or default_roster()
+    results = {}
+    for spec in roster:
+        attack = spec["threat_model"]
+        path = f"metrics_{attack}.json"
+        if os.path.exists(path):
+            with open(path) as f:
+                results[attack] = json.load(f)
+        else:
+            print(f"warning, missing {path}")
+
+    aggregate = _aggregate(results)
+    with open(output_path, "w") as f:
+        json.dump(aggregate, f, indent=4)
+    print(f"\nbenchmark summary saved to {output_path}")
+    return aggregate
+
+
+#serial fallback, run the full roster in one process
 def run_benchmark(base_config=None, roster=None, output_path="benchmark_metrics.json"):
     base_config = base_config or ExperimentConfig()
     roster = roster or default_roster()
 
     results = {}
     for spec in roster:
-        attack = spec["threat_model"]
-        cfg = replace(base_config, output_path=f"metrics_{attack}.json", **spec)
-        print(f"\n===== benchmark attack: {attack} (unlearner={cfg.unlearner}) =====")
-        results[attack] = run_experiment(cfg)
+        results[spec["threat_model"]] = run_single_attack(spec["threat_model"], base_config)
 
     aggregate = _aggregate(results)
     with open(output_path, "w") as f:
