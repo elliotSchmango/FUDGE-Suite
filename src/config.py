@@ -2,11 +2,16 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Any
 
 #fixed benchmark constants except FU algo
+#model axis locked in models/model.py
 NUM_CLIENTS = 50
 NUM_ROUNDS = 50
 DIRICHLET_ALPHA = 0.25
 BATCH_SIZE = 64
 PARTITIONS_PATH = "src/datasets/partitions.json"
+
+#cifar-10 normalization stats
+CIFAR10_MEAN = (0.4914, 0.4822, 0.4465)
+CIFAR10_STD = (0.2470, 0.2435, 0.2616)
 
 
 @dataclass
@@ -25,7 +30,8 @@ class ExperimentConfig:
 
     #shared attack parameters
     target_label: int = 0
-    poison_ratio: float = 0.2
+    #calibrated on badnets implant floor
+    poison_ratio: float = 0.5
     amplification_factor: float = 4.0
     patch_size: int = 3
 
@@ -33,6 +39,21 @@ class ExperimentConfig:
     attack_enabled: bool = True
     malicious_client_id: str = "0"
     unlearn_client_id: str = "0"
+    #multi-client unlearn scope, none = single unlearn_client_id
+    unlearn_client_ids: List[str] = None
+
+    #resurgence probe
+    resurgence_probe: bool = False
+    resurgence_steps: int = 100
+    resurgence_lr: float = 0.01
+
+    #seed for reproducible runs
+    seed: int = 0
+
+    #client-side training, tuned within the locked round budget
+    local_epochs: int = 8
+    client_lr: float = 0.03
+    lr_cosine: bool = True
 
     #fixed-element overrides
     num_clients: int = NUM_CLIENTS
@@ -47,7 +68,7 @@ class ExperimentConfig:
     output_path: str = "run_metrics.json"
 
 
-#cheap end-to-end validation, few rounds, one simple attack, keeps 50-client topology
+#cheap end-to-end smoke config
 def test_config():
     return ExperimentConfig(
         threat_model="badnets",

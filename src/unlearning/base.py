@@ -10,6 +10,8 @@ class UnlearnContext:
     unlearn_client_id: str
     device: Any
     history_cache: Dict[int, Any] = field(default_factory=dict)
+    #optional efficiency counters
+    cost: Dict[str, Any] = field(default_factory=dict)
 
 class BaseUnlearner(ABC):
     #interface for FU algos
@@ -21,5 +23,5 @@ class BaseUnlearner(ABC):
 
     @abstractmethod
     def unlearn(self, model, forget_loader, retain_loader, context: UnlearnContext) -> List[Any]:
-        #scrub the forget target from model and return post-unlearning weights as numpy arrays
+        #scrub forget target, return post weights
         ...

@@ -1,13 +1,22 @@
-workflow_info/
-design_log_instructions.txt
-design_log.md
+#python
 .venv/
+__pycache__/
+*.pyc
+src/**/*.pyc
+
+#data & run artifacts
+data/
+logs/
+*.npz
+metrics_*.json
+run_metrics.json
+benchmark_metrics.json
+
+#local working docs & references
+archive/
+literature/
 notes_for_fudge_paper.md
 
-src/**/*.pyc
-data/
-run_metrics.json
-validation_verification.md
-
+#os
 .DS_Store
 src/.DS_Store

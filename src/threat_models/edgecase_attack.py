@@ -5,7 +5,7 @@ from .base import BaseThreatModel
 from src.registry import register_threat_model
 
 
-#tail samples of a class, farthest from its pixel centroid
+#tail samples farthest from pixel centroid
 def tail_indices(images, labels, source_class, tail_fraction):
     src = (labels == source_class).nonzero(as_tuple=True)[0]
     if len(src) == 0:
@@ -18,7 +18,7 @@ def tail_indices(images, labels, source_class, tail_fraction):
     return src[far]
 
 
-#edge-case backdoor (wang et al 2020), in-distribution variant
+#edge-case backdoor
 @register_threat_model("edgecase")
 class EdgeCaseThreatModel(BaseThreatModel):
     def __init__(self, target_label: int, poison_ratio: float, source_class: int = 1,
@@ -36,7 +36,7 @@ class EdgeCaseThreatModel(BaseThreatModel):
             labels.append(lbl)
         return torch.stack(images), torch.tensor(labels)
 
-    #relabel tail source-class samples to target
+    #relabel tail samples to target
     def poison_dataset(self, dataset: Dataset, client_id: str = None) -> Dataset:
         images, labels = self._stack(dataset)
         idx = tail_indices(images, labels, self.source_class, self.tail_fraction)

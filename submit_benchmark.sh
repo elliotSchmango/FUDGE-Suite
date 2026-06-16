@@ -4,11 +4,11 @@
 #SBATCH --gres=gpu:a100:1
 #SBATCH -c 8
 #SBATCH --mem=64G
-#SBATCH -t 02:00:00
+#SBATCH -t 06:00:00
 #SBATCH -J fudge_benchmark
 #SBATCH -o logs/run_%A_%a.out
 #SBATCH -e logs/run_%A_%a.err
-#SBATCH --array=0-5
+#SBATCH --array=0-6
 
 #create logs directory if missing
 mkdir -p logs
@@ -41,8 +41,8 @@ else
     echo "reusing existing partitions.json"
 fi
 
-#map array index to attack
-ATTACKS=(badnets dba neurotoxin edgecase badfu fedmua)
+#map array index to roster row, dba split into partial and detected
+ATTACKS=(badnets dba_partial dba_detected neurotoxin edgecase badfu fedmua)
 ATTACK=${ATTACKS[$SLURM_ARRAY_TASK_ID]}
 
 echo "running attack $ATTACK"

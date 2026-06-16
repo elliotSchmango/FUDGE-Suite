@@ -1,36 +1,47 @@
+import math
+
 import numpy as np
 import flwr as fl
 import ray
 from flwr.common import ndarrays_to_parameters
 
-from src.models.model import Net
+from src.models.model import build_model
 from src.strategies.strategy import FUDGEStrategy
 from src.client import get_client_fn
 
 
-#run federated training simulation and return aggregated global weights
+#run federated training, return global weights
 def federated_train(config, base_dataset, threat_model, benchmarker,
                     attack_enabled=True, label_prefix=""):
     ray.shutdown()
 
-    #disable the attacker when retraining from scratch
+    #disable attacker for rfs
     effective_malicious_id = config.malicious_client_id if attack_enabled else None
 
-    #saboteurs the strategy forces in, empty when no attack
+    #saboteurs forced in, empty when no attack
     if attack_enabled and threat_model is not None:
         mal_ids = threat_model.malicious_client_ids(config.malicious_client_id)
     else:
         mal_ids = []
 
-    init_model = Net()
+    init_model = build_model()
     init_weights = [val.cpu().numpy() for _, val in init_model.state_dict().items()]
     init_parameters = ndarrays_to_parameters(init_weights)
 
-    #server-side eval audits the global model per round
+    #per-round global model audit
     def evaluate_fn(server_round, parameters, cfg):
         weights = [np.copy(p) for p in parameters]
         metrics = benchmarker.run_audit(weights, label=f"{label_prefix}[round {server_round}]")
         return 0.0, metrics
+
+    #cosine lr decay across rounds
+    def fit_config_fn(server_round):
+        if config.lr_cosine and config.num_rounds > 1:
+            progress = (server_round - 1) / (config.num_rounds - 1)
+            lr = config.client_lr * 0.5 * (1.0 + math.cos(math.pi * progress))
+        else:
+            lr = config.client_lr
+        return {"lr": lr}
 
     strategy = FUDGEStrategy(
         fraction_fit=0.2,
@@ -38,6 +49,7 @@ def federated_train(config, base_dataset, threat_model, benchmarker,
         min_fit_clients=10,
         min_available_clients=config.num_clients,
         evaluate_fn=evaluate_fn,
+        on_fit_config_fn=fit_config_fn,
         initial_parameters=init_parameters,
         malicious_client_ids=mal_ids,
     )
@@ -47,7 +59,9 @@ def federated_train(config, base_dataset, threat_model, benchmarker,
         partitions_path=config.partitions_path,
         malicious_client_id=effective_malicious_id,
         threat_model=threat_model,
+        local_epochs=config.local_epochs,
         batch_size=config.batch_size,
+        lr=config.client_lr,
         amplification_factor=config.amplification_factor,
     )
 

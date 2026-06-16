@@ -5,7 +5,7 @@ from src.registry import register_unlearner
 from src.unlearning.base import BaseUnlearner, UnlearnContext
 
 
-#read weights out of a model state dict as numpy arrays
+#read model weights as numpy
 def weights_from_model(model):
     return [np.copy(val.detach().cpu().numpy()) for _, val in model.state_dict().items()]
 

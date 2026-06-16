@@ -5,16 +5,15 @@ from torch.utils.data import Dataset, TensorDataset
 from .base import BaseThreatModel
 from src.registry import register_threat_model
 
-#BadFU camouflage attack (arxiv 2508.15541)
+#BadFU camouflage attack
 @register_threat_model("badfu")
 class BadFUThreatModel(BaseThreatModel):
-    #config
     def __init__(self, target_label: int, poison_ratio: float, camou_ratio: float = 0.2):
         super().__init__(target_label, poison_ratio)
         self.camou_ratio = camou_ratio
         self.patch_size = 3
 
-    #load dataset into stacked tensors
+    #stack dataset into tensors
     def _stack(self, dataset: Dataset):
         images = []
         labels = []
@@ -24,13 +23,13 @@ class BadFUThreatModel(BaseThreatModel):
             labels.append(lbl)
         return torch.stack(images), torch.tensor(labels)
 
-    #stamp patch bottom-right, shared with ASR scorer
+    #stamp patch bottom-right
     def apply_trigger(self, images: torch.Tensor) -> torch.Tensor:
         out = images.clone()
         out[:, :, -self.patch_size:, -self.patch_size:] = 1.0
         return out
 
-    #backdoor subset, trigger then flip label to target
+    #trigger then flip label to target
     def poison_dataset(self, dataset: Dataset, client_id: str = None) -> Dataset:
         images, labels = self._stack(dataset)
         num_bd = int(len(images) * self.poison_ratio)
@@ -40,8 +39,7 @@ class BadFUThreatModel(BaseThreatModel):
         bd_labels = torch.full((num_bd,), self.target_label, dtype=labels.dtype)
         return TensorDataset(bd_images, bd_labels)
 
-    #camouflage subset, trigger but keep true label, hides backdoor in training
-    #same subset is the attacker forget set
+    #camouflage subset keeps true label
     def generate_camouflage(self, dataset: Dataset, client_id: str = None,
                             live_model: nn.Module = None) -> Dataset:
         images, labels = self._stack(dataset)
@@ -54,7 +52,7 @@ class BadFUThreatModel(BaseThreatModel):
         cf_labels = labels[num_bd:num_bd + num_cf].clone()
         return TensorDataset(cf_images, cf_labels)
 
-    #malicious trainset, clean plus backdoor plus camouflage
+    #clean plus backdoor plus camouflage
     def build_malicious_trainset(self, dataset: Dataset, client_id: str = None) -> Dataset:
         images, labels = self._stack(dataset)
         backdoor = self.poison_dataset(dataset, client_id)
@@ -63,7 +61,7 @@ class BadFUThreatModel(BaseThreatModel):
         all_labels = torch.cat([labels, backdoor.tensors[1], camou.tensors[1]])
         return TensorDataset(all_images, all_labels)
 
-    #attacker requests unlearning of camouflage samples
+    #camouflage forget set
     def get_forget_set(self, dataset: Dataset, client_id: str = None) -> Dataset:
         return self.generate_camouflage(dataset, client_id)
 

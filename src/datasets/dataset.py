@@ -1,21 +1,21 @@
-#import required libraries
+#import libraries
 import json
 import torch
 from torch.utils.data import Dataset
 
 class ProgrammaticBackdoorDataset(Dataset):
-    #initialize dataset with client partition
+    #client partition dataset
     def __init__(self, client_id, partitions_path, base_dataset, transform=None):
         self.client_id = str(client_id)
         self.partitions_path = partitions_path
         self.base_dataset = base_dataset
         self.transform = transform
         
-        #open partitions json file
+        #load partitions
         with open(self.partitions_path, 'r') as f:
             partitions = json.load(f)
             
-        #get global indices for client
+        #client global indices
         self.indices = partitions[self.client_id]
         
     #get dataset length

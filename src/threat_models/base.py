@@ -17,14 +17,14 @@ class BaseThreatModel(ABC):
         #data the unlearner targets
         ...
 
-    #forget set, fedmua uses model
+    #model-aware forget set
     def build_forget_set(self, dataset: Dataset, model=None, device=None,
                          client_id: str = None) -> Dataset:
         return self.get_forget_set(dataset, client_id)
 
-    #hooks below, defaults suit single-client poisoning
+    #optional hooks, defaults suit single-client
 
-    #attacking clients, DBA goes multi-client
+    #which clients attack
     def is_malicious(self, client_id: str, configured_malicious_id: str) -> bool:
         return str(client_id) == str(configured_malicious_id)
 

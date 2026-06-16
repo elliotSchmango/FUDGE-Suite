@@ -4,8 +4,7 @@ from .badnets_attack import BadNetsThreatModel
 from src.registry import register_threat_model
 
 
-#durable backdoor (zhang et al 2022)
-#update projected onto low-benign-movement coords to survive benign rounds
+#durable backdoor
 @register_threat_model("neurotoxin")
 class NeurotoxinThreatModel(BadNetsThreatModel):
     def __init__(self, target_label: int, poison_ratio: float, patch_size: int = 3,
@@ -14,10 +13,10 @@ class NeurotoxinThreatModel(BadNetsThreatModel):
         #fraction of high-movement coords to drop
         self.mask_ratio = mask_ratio
 
-    #project backdoor update onto low-benign-movement coords
+    #project update onto low-movement coords
     def craft_malicious_update(self, model, global_params, device, amplification_factor,
                                clean_loader=None, criterion=None):
-        #save poisoned weights, restore global to read benign gradient
+        #restore global to read benign gradient
         trained = [p.detach().clone() for p in model.parameters()]
 
         benign_grads = [torch.zeros_like(p) for p in model.parameters()]
@@ -33,7 +32,7 @@ class NeurotoxinThreatModel(BadNetsThreatModel):
                 for p in model.parameters()
             ]
 
-        #rebuild each param from global plus masked scaled delta
+        #rebuild param from global plus masked delta
         for p, t, g, bg in zip(model.parameters(), trained, global_params, benign_grads):
             g = g.to(device)
             delta = t - g

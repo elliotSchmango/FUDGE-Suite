@@ -5,18 +5,16 @@ from .base import BaseThreatModel
 from src.registry import register_threat_model
 
 
-#malicious unlearning attack (chen et al 2025)
-#client trains normally then submits crafted unlearn request that flips a victim class
-#metric is targeted misclassification, control is honest request
+#malicious unlearn request flips a victim class
 @register_threat_model("fedmua")
 class FedMUAThreatModel(BaseThreatModel):
     def __init__(self, target_label: int, poison_ratio: float, victim_class: int = 0,
                  num_requests: int = 20, max_candidates: int = 200):
         super().__init__(target_label, poison_ratio)
         self.victim_class = victim_class
-        #few samples to request unlearning
+        #samples to request unlearning
         self.num_requests = num_requests
-        #cap candidates scored for cost
+        #cap candidates scored
         self.max_candidates = max_candidates
 
     #stack dataset into tensors
@@ -28,17 +26,17 @@ class FedMUAThreatModel(BaseThreatModel):
             labels.append(lbl)
         return torch.stack(images), torch.tensor(labels)
 
-    #train normally, malice is the request not training
+    #train normally
     def build_malicious_trainset(self, dataset: Dataset, client_id: str = None) -> Dataset:
         return dataset
 
-    #model-free fallback, first victim-class samples
+    #model-free fallback
     def get_forget_set(self, dataset: Dataset, client_id: str = None) -> Dataset:
         images, labels = self._stack(dataset)
         idx = (labels == self.victim_class).nonzero(as_tuple=True)[0][:self.num_requests]
         return TensorDataset(images[idx], labels[idx])
 
-    #request victim-class samples whose gradient aligns with victim direction
+    #victim-class samples aligned with victim gradient
     def build_forget_set(self, dataset: Dataset, model=None, device=None,
                          client_id: str = None) -> Dataset:
         if model is None:
@@ -61,10 +59,10 @@ class FedMUAThreatModel(BaseThreatModel):
             grads = torch.autograd.grad(loss, params)
             return torch.cat([g.flatten() for g in grads]).detach()
 
-        #victim direction from victim-class batch
+        #victim direction
         victim_dir = flat_grad(images[cand], labels[cand])
 
-        #score each candidate by alignment, take top requests
+        #score candidates by alignment
         scores = torch.tensor([
             torch.dot(flat_grad(images[i].unsqueeze(0), labels[i].unsqueeze(0)), victim_dir).item()
             for i in cand

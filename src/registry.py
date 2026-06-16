@@ -29,7 +29,7 @@ def register_scorer(name):
     return deco
 
 
-#build threat model from config selection
+#build threat model from config
 def build_threat_model(config):
     cls = THREAT_MODELS[config.threat_model]
     return cls(
@@ -39,13 +39,13 @@ def build_threat_model(config):
     )
 
 
-#build unlearner from config selection
+#build unlearner from config
 def build_unlearner(config):
     cls = UNLEARNERS[config.unlearner]
     return cls(**config.unlearner_args)
 
 
-#build scorers, threat model supplies live trigger
+#build scorers
 def build_scorers(config, threat_model=None):
     return [SCORERS[name](config, threat_model) for name in config.scorers]
 

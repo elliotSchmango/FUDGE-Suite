@@ -8,15 +8,15 @@ from src.registry import register_scorer
 class BaseScorer(ABC):
     @property
     @abstractmethod
-    def name(self) -> str: #name used in telemetry output dict
+    def name(self) -> str: #telemetry key
         ...
 
     @abstractmethod
-    def evaluate(self, model, dataloader, device) -> float: #run eval and return metrics
+    def evaluate(self, model, dataloader, device) -> float: #run eval
         ...
 
 
-#compute clean accuracy on test set
+#clean accuracy
 class CleanAccuracyScorer(BaseScorer):
     @property
     def name(self) -> str:
@@ -43,7 +43,7 @@ def build_accuracy(config, threat_model=None):
     return CleanAccuracyScorer()
 
 
-#default patch trigger when no threat model trigger
+#default patch trigger
 def _default_patch_trigger(patch_size: int):
     def trigger_fn(images):
         out = images.clone()
@@ -84,7 +84,7 @@ class ASRScorer(BaseScorer):
 
 @register_scorer("asr")
 def build_asr(config, threat_model=None):
-    #use threat model trigger so eval matches injection
+    #use threat model trigger
     if threat_model is not None and hasattr(threat_model, "apply_trigger"):
         trigger_fn = threat_model.apply_trigger
     else:

@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import flwr as fl
 from torch.utils.data import DataLoader
-from src.models.model import Net
+from src.models.model import build_model
 from src.datasets.dataset import ProgrammaticBackdoorDataset
 from src.threat_models.base import BaseThreatModel
 
@@ -55,20 +55,19 @@ class FUDGEClient(fl.client.NumPyClient):
         self.batch_size = batch_size
         self.lr = lr
         self.momentum = momentum
-        self.model = Net()
+        self.model = build_model()
         self.malicious_client_id = malicious_client_id
         self.threat_model = threat_model
         self.amplification_factor = amplification_factor
 
-        #build client partition from index map
+        #build client partition
         self.partition = ProgrammaticBackdoorDataset(
             client_id=cid,
             partitions_path=partitions_path,
             base_dataset=base_dataset,
         )
 
-        #threat model picks which clients attack
-        #single id by default, a set for DBA
+        #threat model picks attacking clients
         self.is_malicious = (
             threat_model is not None
             and threat_model.is_malicious(cid, malicious_client_id)
@@ -99,18 +98,19 @@ class FUDGEClient(fl.client.NumPyClient):
         )
         self.model.to(device)
 
-        #train as described above
         train_dataset = self.train_partition
 
-        #record global params for FedProx proximal penalty
+        #global params for FedProx penalty
         proximal_mu = config.get("proximal_mu", None)
         global_params = [p.detach().clone() for p in self.model.parameters()]
 
         trainloader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
         criterion = torch.nn.CrossEntropyLoss()
+        #per-round lr from server, fall back to default
+        round_lr = config.get("lr", self.lr)
         optimizer = torch.optim.SGD(
             self.model.parameters(),
-            lr=self.lr,
+            lr=round_lr,
             momentum=self.momentum,
             weight_decay=1e-4,
         )
@@ -136,7 +136,7 @@ class FUDGEClient(fl.client.NumPyClient):
                 loss.backward()
                 optimizer.step()
 
-        #threat model shapes malicious update while clean partition is the benign reference
+        #threat model shapes malicious update
         if self.is_malicious:
             clean_loader = DataLoader(self.partition, batch_size=self.batch_size, shuffle=True)
             self.threat_model.craft_malicious_update(

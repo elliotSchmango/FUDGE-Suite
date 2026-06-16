@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from src.models.model import Net
+from src.models.model import build_model
 from typing import List
 from src.audit.scorers import BaseScorer
 
@@ -18,9 +18,9 @@ class Benchmarker:
             return torch.device("mps")
         return torch.device("cpu")
 
-    #load weight arrays into neural net and return model
+    #load weights into model
     def _load_model(self, weights):
-        model = Net()
+        model = build_model()
         params_dict = zip(model.state_dict().keys(), weights)
         state_dict = {k: torch.tensor(v) for k, v in params_dict}
         model.load_state_dict(state_dict, strict=True)
@@ -28,7 +28,7 @@ class Benchmarker:
         model.eval()
         return model
 
-    #run full audit and return formatted telemetry dict structure
+    #run audit, return metrics dict
     def run_audit(self, weights, label: str = ""):
         model = self._load_model(weights)
         device = self._get_device()
@@ -46,7 +46,7 @@ class Benchmarker:
             
         return results
 
-    #generate complete pre/post unlearning telemetry report
+    #pre/post report
     def generate_report(self, pre_weights, post_weights, config: dict):
         pre = self.run_audit(pre_weights, label="pre-unlearning")
         post = self.run_audit(post_weights, label="post-unlearning")

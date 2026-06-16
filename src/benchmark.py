@@ -6,20 +6,25 @@ from src.config import ExperimentConfig
 from src.runner import run_experiment
 
 
-#each attack carries its own args and scorers
+#roster rows, name decouples row from threat model so dba can appear twice
 def default_roster():
     return [
-        {"threat_model": "badnets", "threat_model_args": {},
+        {"name": "badnets", "threat_model": "badnets", "threat_model_args": {},
          "scorers": ["accuracy", "asr"]},
-        {"threat_model": "dba", "threat_model_args": {"num_saboteurs": 4},
+        #dba-partial unlearns client 0 only
+        {"name": "dba_partial", "threat_model": "dba", "threat_model_args": {"num_saboteurs": 4},
          "scorers": ["accuracy", "asr"]},
-        {"threat_model": "neurotoxin", "threat_model_args": {"mask_ratio": 0.1},
+        #dba-detected unlearns all colluders
+        {"name": "dba_detected", "threat_model": "dba", "threat_model_args": {"num_saboteurs": 4},
+         "scorers": ["accuracy", "asr"], "unlearn_client_ids": ["0", "1", "2", "3"]},
+        {"name": "neurotoxin", "threat_model": "neurotoxin", "threat_model_args": {"mask_ratio": 0.1},
          "scorers": ["accuracy", "asr"]},
-        {"threat_model": "edgecase", "threat_model_args": {"source_class": 1, "tail_fraction": 0.1},
+        {"name": "edgecase", "threat_model": "edgecase", "threat_model_args": {"source_class": 1, "tail_fraction": 0.1},
          "scorers": ["accuracy", "edgecase_asr"]},
-        {"threat_model": "badfu", "threat_model_args": {"camou_ratio": 0.2},
-         "scorers": ["accuracy", "asr"]},
-        {"threat_model": "fedmua", "threat_model_args": {"victim_class": 0, "num_requests": 20},
+        #badfu graded on resurgence
+        {"name": "badfu", "threat_model": "badfu", "threat_model_args": {"camou_ratio": 0.2},
+         "scorers": ["accuracy", "asr"], "resurgence_probe": True},
+        {"name": "fedmua", "threat_model": "fedmua", "threat_model_args": {"victim_class": 0, "num_requests": 20},
          "scorers": ["accuracy", "misclassification"]},
     ]
 
@@ -37,12 +42,17 @@ def _aggregate(results):
     rows = {}
     for attack, report in results.items():
         m = _attack_metric(report)
-        post = report.get(f"post_unlearn_{m}")
+        #resurgence is graded post when present
+        resurge = report.get(f"post_resurge_{m}")
+        post_unlearn = report.get(f"post_unlearn_{m}")
+        post = resurge if resurge is not None else post_unlearn
         rfs = report.get(f"rfs_{m}")
         gap = (post - rfs) if (post is not None and rfs is not None) else None
         rows[attack] = {
             "metric": m,
             "pre": report.get(f"pre_unlearn_{m}"),
+            "post_unlearn": post_unlearn,
+            "post_resurge": resurge,
             "post": post,
             "rfs": rfs,
             "gap_to_rfs": gap,
@@ -59,34 +69,36 @@ def _aggregate(results):
     return {"per_attack": rows, "summary": summary}
 
 
-#per-attack config, own output and weight cache so array tasks never clobber each other
+#per-row config with own output and cache
 def attack_config(attack_name, base_config=None, roster=None):
     base_config = base_config or ExperimentConfig()
     roster = roster or default_roster()
-    spec = next((s for s in roster if s["threat_model"] == attack_name), None)
+    spec = next((s for s in roster if s["name"] == attack_name), None)
     if spec is None:
         raise ValueError(f"unknown attack {attack_name}")
+    #remaining keys map to config fields
+    overrides = {k: v for k, v in spec.items() if k != "name"}
     return replace(
         base_config,
         output_path=f"metrics_{attack_name}.json",
         weights_cache_path=f"cache_{attack_name}.npz",
-        **spec,
+        **overrides,
     )
 
 
-#run one attack end to end, one slurm array task
+#run one attack end to end
 def run_single_attack(attack_name, base_config=None):
     cfg = attack_config(attack_name, base_config)
     print(f"\n===== attack {attack_name} (unlearner={cfg.unlearner}) =====")
     return run_experiment(cfg)
 
 
-#fold the per-attack metric files into the summary profile
+#fold per-attack metrics into summary
 def aggregate_from_files(roster=None, output_path="benchmark_metrics.json"):
     roster = roster or default_roster()
     results = {}
     for spec in roster:
-        attack = spec["threat_model"]
+        attack = spec["name"]
         path = f"metrics_{attack}.json"
         if os.path.exists(path):
             with open(path) as f:
@@ -101,14 +113,14 @@ def aggregate_from_files(roster=None, output_path="benchmark_metrics.json"):
     return aggregate
 
 
-#serial fallback, run the full roster in one process
+#serial roster run
 def run_benchmark(base_config=None, roster=None, output_path="benchmark_metrics.json"):
     base_config = base_config or ExperimentConfig()
     roster = roster or default_roster()
 
     results = {}
     for spec in roster:
-        results[spec["threat_model"]] = run_single_attack(spec["threat_model"], base_config)
+        results[spec["name"]] = run_single_attack(spec["name"], base_config)
 
     aggregate = _aggregate(results)
     with open(output_path, "w") as f:

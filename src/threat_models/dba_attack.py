@@ -5,7 +5,7 @@ from .badnets_attack import BadNetsThreatModel
 from src.registry import register_threat_model
 
 
-#distributed backdoor (xie et al 2020)
+#distributed backdoor
 @register_threat_model("dba")
 class DBAThreatModel(BadNetsThreatModel):
     def __init__(self, target_label: int, poison_ratio: float, patch_size: int = 3,
@@ -13,7 +13,7 @@ class DBAThreatModel(BadNetsThreatModel):
         super().__init__(target_label, poison_ratio, patch_size)
         self.num_saboteurs = num_saboteurs
 
-    #contiguous block of clients from the configured base
+    #contiguous block of clients
     def is_malicious(self, client_id: str, configured_malicious_id: str) -> bool:
         base = int(configured_malicious_id)
         return base <= int(client_id) < base + self.num_saboteurs
@@ -22,7 +22,7 @@ class DBAThreatModel(BadNetsThreatModel):
         base = int(configured_malicious_id)
         return [str(base + i) for i in range(self.num_saboteurs)]
 
-    #four corner slots for sub-triggers
+    #four corner slots
     def _slots(self):
         ps = self.patch_size
         return [
@@ -32,14 +32,14 @@ class DBAThreatModel(BadNetsThreatModel):
             (slice(-ps, None), slice(-ps, None)),
         ]
 
-    #one sub-pattern for this client
+    #client sub-pattern
     def _sub_trigger(self, images: torch.Tensor, idx: int) -> torch.Tensor:
         out = images.clone()
         r, c = self._slots()[idx % 4]
         out[:, :, r, c] = 1.0
         return out
 
-    #full combined trigger for ASR eval
+    #full combined trigger
     def apply_trigger(self, images: torch.Tensor) -> torch.Tensor:
         out = images.clone()
         for r, c in self._slots()[:self.num_saboteurs]:

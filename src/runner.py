@@ -1,5 +1,7 @@
 import os
 import json
+import random
+import time
 from dataclasses import asdict
 
 import numpy as np
@@ -9,7 +11,8 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, ConcatDataset
 
 from src import registry
-from src.models.model import Net
+from src.config import CIFAR10_MEAN, CIFAR10_STD
+from src.models.model import build_model
 from src.datasets.dataset import ProgrammaticBackdoorDataset
 from src.audit.benchmarker import Benchmarker
 from src.training import federated_train
@@ -25,9 +28,51 @@ def _get_device():
     return torch.device("cpu")
 
 
-#load weight arrays into a fresh model on device
+#measure wall-clock and peak gpu memory around a phase
+class CostMeter:
+    def __init__(self, device):
+        self.device = device
+        self.wall_s = None
+        self.peak_mem_mb = None
+
+    def __enter__(self):
+        if self.device.type == "cuda":
+            torch.cuda.reset_peak_memory_stats(self.device)
+        self._start = time.perf_counter()
+        return self
+
+    def __exit__(self, *exc):
+        self.wall_s = time.perf_counter() - self._start
+        if self.device.type == "cuda":
+            self.peak_mem_mb = torch.cuda.max_memory_allocated(self.device) / 1e6
+        return False
+
+
+#sum bytes across nested numpy/torch containers
+def _nbytes(obj):
+    if torch.is_tensor(obj):
+        return obj.element_size() * obj.nelement()
+    if hasattr(obj, "nbytes"):
+        return int(obj.nbytes)
+    if isinstance(obj, dict):
+        return sum(_nbytes(v) for v in obj.values())
+    if isinstance(obj, (list, tuple)):
+        return sum(_nbytes(v) for v in obj)
+    return 0
+
+
+#seed rng for reproducible runs
+def _seed_everything(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
+#load weights into fresh model
 def _load_model(weights, device):
-    model = Net()
+    model = build_model()
     params_dict = zip(model.state_dict().keys(), weights)
     state_dict = {k: torch.tensor(v) for k, v in params_dict}
     model.load_state_dict(state_dict, strict=True)
@@ -35,21 +80,53 @@ def _load_model(weights, device):
     return model
 
 
-#build forget set (attacker-defined) and retain set (all other clients)
+#read model weights as numpy
+def _model_weights(model):
+    return [np.copy(v.detach().cpu().numpy()) for _, v in model.state_dict().items()]
+
+
+#brief benign fine-tune to surface latent backdoor
+def _benign_finetune(model, retain_loader, device, steps, lr):
+    criterion = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
+    model.train()
+    seen = 0
+    while seen < steps:
+        for images, labels in retain_loader:
+            images, labels = images.to(device), labels.to(device)
+            optimizer.zero_grad(set_to_none=True)
+            loss = criterion(model(images), labels)
+            loss.backward()
+            optimizer.step()
+            seen += 1
+            if seen >= steps:
+                break
+    return _model_weights(model)
+
+
+#build forget and retain loaders, unlearn one client or all colluders
 def _build_unlearn_loaders(config, base_dataset, threat_model, model, device):
-    raw_unlearn = ProgrammaticBackdoorDataset(
-        client_id=config.unlearn_client_id,
-        partitions_path=config.partitions_path,
-        base_dataset=base_dataset,
-    )
-    #model-aware forget set (but influence-based attacks use the trained model)
-    forget_dataset = threat_model.build_forget_set(
-        raw_unlearn, model=model, device=device, client_id=config.unlearn_client_id
-    )
+    unlearn_ids = [str(c) for c in (config.unlearn_client_ids or [config.unlearn_client_id])]
+
+    #union forget set across unlearned clients
+    forget_parts = []
+    for uid in unlearn_ids:
+        raw_unlearn = ProgrammaticBackdoorDataset(
+            client_id=uid,
+            partitions_path=config.partitions_path,
+            base_dataset=base_dataset,
+        )
+        #model-aware forget set
+        forget_parts.append(
+            threat_model.build_forget_set(
+                raw_unlearn, model=model, device=device, client_id=uid
+            )
+        )
+    forget_dataset = forget_parts[0] if len(forget_parts) == 1 else ConcatDataset(forget_parts)
 
     retain_partitions = []
     for cid in range(config.num_clients):
-        if str(cid) == config.unlearn_client_id:
+        if str(cid) in unlearn_ids:
             continue
         retain_partitions.append(
             ProgrammaticBackdoorDataset(
@@ -67,10 +144,14 @@ def _build_unlearn_loaders(config, base_dataset, threat_model, model, device):
 
 #full benchmark pipeline
 def run_experiment(config):
+    _seed_everything(config.seed)
     registry.import_builtins()
 
-    #load fixed CIFAR-10 dataset
-    transform = transforms.Compose([transforms.ToTensor()])
+    #load and normalize CIFAR-10
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
+    ])
     base_dataset = torchvision.datasets.CIFAR10(
         root="./data", train=True, download=True, transform=transform
     )
@@ -79,14 +160,17 @@ def run_experiment(config):
     )
     test_loader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
 
-    #threat model first so scorers can match its trigger
+    #threat model first so scorers match trigger
     threat_model = registry.build_threat_model(config) if config.attack_enabled else None
 
     #standardized eval suite
     scorers = registry.build_scorers(config, threat_model)
     benchmarker = Benchmarker(test_loader=test_loader, scorers=scorers)
 
-    #get attacked global weights from either cache or fresh federated training
+    #shared device
+    device = _get_device()
+
+    #attacked global weights from cache or fresh training
     strategy = None
     if config.use_cached_weights and os.path.exists(config.weights_cache_path):
         print(f"loading cached global weights from {config.weights_cache_path}")
@@ -103,19 +187,20 @@ def run_experiment(config):
         np.savez(config.weights_cache_path, *global_weights)
         print(f"cached global weights to {config.weights_cache_path}")
 
-    #control baseline, retrain from scratch with attack disabled
+    #rfs control, attack disabled
     rfs_metrics = None
+    rfs_cost = None
     if config.run_rfs_baseline:
         print("\nrunning retrain-from-scratch control baseline")
-        rfs_weights = run_rfs_baseline(config, base_dataset, benchmarker)
+        with CostMeter(device) as rfs_cost:
+            rfs_weights = run_rfs_baseline(config, base_dataset, benchmarker)
         rfs_metrics = benchmarker.run_audit(rfs_weights, label="rfs-baseline")
 
     print("\nfederated training complete. starting unlearning phase.")
 
-    device = _get_device()
     model = _load_model(global_weights, device)
 
-    #forget and retain loaders defined by the active threat model
+    #threat-model forget and retain loaders
     forget_loader, retain_loader = _build_unlearn_loaders(
         config, base_dataset, threat_model, model, device
     )
@@ -129,11 +214,12 @@ def run_experiment(config):
         history_cache=strategy.history_cache if strategy is not None else {},
     )
 
-    #run selected unlearning algorithm
+    #run unlearner
     unlearner = registry.build_unlearner(config)
-    post_weights = unlearner.unlearn(model, forget_loader, retain_loader, context)
+    with CostMeter(device) as unlearn_cost:
+        post_weights = unlearner.unlearn(model, forget_loader, retain_loader, context)
 
-    #pre/post telemetry plus the rfs column
+    #pre/post report plus rfs
     report = benchmarker.generate_report(
         pre_weights=global_weights,
         post_weights=post_weights,
@@ -142,6 +228,35 @@ def run_experiment(config):
     if rfs_metrics is not None:
         for k, v in rfs_metrics.items():
             report[f"rfs_{k}"] = v
+
+    #efficiency, raw costs for both phases
+    report["efficiency_unlearn_wall_s"] = unlearn_cost.wall_s
+    report["efficiency_unlearn_peak_mem_mb"] = unlearn_cost.peak_mem_mb
+    report["efficiency_storage_overhead_bytes"] = _nbytes(context.history_cache)
+    #optional unlearner-reported counters
+    for k, v in context.cost.items():
+        report[f"efficiency_unlearn_{k}"] = v
+    if rfs_cost is not None:
+        report["efficiency_rfs_wall_s"] = rfs_cost.wall_s
+        report["efficiency_rfs_peak_mem_mb"] = rfs_cost.peak_mem_mb
+        #rfs comm rounds known
+        report["efficiency_rfs_comm_rounds"] = config.num_rounds
+        #derived headline
+        if unlearn_cost.wall_s and rfs_cost.wall_s:
+            report["efficiency_wall_speedup"] = rfs_cost.wall_s / unlearn_cost.wall_s
+        if config.num_rounds and "comm_rounds" in context.cost:
+            report["efficiency_comm_round_fraction"] = context.cost["comm_rounds"] / config.num_rounds
+
+    #resurgence probe, re-measure after benign fine-tune
+    if config.resurgence_probe:
+        print("\nrunning resurgence probe (benign fine-tune post-unlearn)")
+        resurge_weights = _benign_finetune(
+            model, retain_loader, device,
+            steps=config.resurgence_steps, lr=config.resurgence_lr,
+        )
+        resurge_metrics = benchmarker.run_audit(resurge_weights, label="resurgence-probe")
+        for k, v in resurge_metrics.items():
+            report[f"post_resurge_{k}"] = v
 
     with open(config.output_path, "w") as f:
         json.dump(report, f, indent=4)
