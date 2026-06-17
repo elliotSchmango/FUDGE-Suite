@@ -6,22 +6,19 @@ from src.config import ExperimentConfig
 from src.runner import run_experiment
 
 
-#roster rows, name decouples row from threat model so dba can appear twice
+#roster rows
 def default_roster():
     return [
         {"name": "badnets", "threat_model": "badnets", "threat_model_args": {},
          "scorers": ["accuracy", "asr"]},
-        #dba-partial unlearns client 0 only
         {"name": "dba_partial", "threat_model": "dba", "threat_model_args": {"num_saboteurs": 4},
          "scorers": ["accuracy", "asr"]},
-        #dba-detected unlearns all colluders
         {"name": "dba_detected", "threat_model": "dba", "threat_model_args": {"num_saboteurs": 4},
          "scorers": ["accuracy", "asr"], "unlearn_client_ids": ["0", "1", "2", "3"]},
         {"name": "neurotoxin", "threat_model": "neurotoxin", "threat_model_args": {"mask_ratio": 0.1},
          "scorers": ["accuracy", "asr"]},
         {"name": "edgecase", "threat_model": "edgecase", "threat_model_args": {"source_class": 1, "tail_fraction": 0.1},
-         "scorers": ["accuracy", "edgecase_asr"]},
-        #badfu graded on resurgence
+         "scorers": ["accuracy", "edgecase_asr"], "seeds": [0, 1]},
         {"name": "badfu", "threat_model": "badfu", "threat_model_args": {"camou_ratio": 0.2},
          "scorers": ["accuracy", "asr"], "resurgence_probe": True},
         {"name": "fedmua", "threat_model": "fedmua", "threat_model_args": {"victim_class": 0, "num_requests": 20},
@@ -29,7 +26,7 @@ def default_roster():
     ]
 
 
-#asr vs misclassification metric key
+#asr vs misclassification metric
 def _attack_metric(report):
     for m in ("asr", "misclassification"):
         if f"post_unlearn_{m}" in report:
@@ -37,7 +34,7 @@ def _attack_metric(report):
     return None
 
 
-#gap-to-rfs profile across attacks
+#gap-to-rfs for each attack
 def _aggregate(results):
     rows = {}
     for attack, report in results.items():

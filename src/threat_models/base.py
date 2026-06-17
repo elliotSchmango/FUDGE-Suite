@@ -24,6 +24,10 @@ class BaseThreatModel(ABC):
 
     #optional hooks, defaults suit single-client
 
+    #full-train reference for global-subpopulation attacks
+    def set_reference_data(self, dataset):
+        pass
+
     #which clients attack
     def is_malicious(self, client_id: str, configured_malicious_id: str) -> bool:
         return str(client_id) == str(configured_malicious_id)

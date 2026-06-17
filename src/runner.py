@@ -186,6 +186,9 @@ def _run_seed(config, seed):
 
     #threat model first so scorers match trigger
     threat_model = registry.build_threat_model(config) if config.attack_enabled else None
+    if threat_model is not None:
+        #full train set for global-subpopulation attacks
+        threat_model.set_reference_data(base_dataset)
 
     #standardized eval suite
     scorers = registry.build_scorers(config, threat_model)

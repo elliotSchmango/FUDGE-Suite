@@ -26,6 +26,8 @@ class EdgeCaseThreatModel(BaseThreatModel):
         super().__init__(target_label, poison_ratio)
         self.source_class = source_class
         self.tail_fraction = tail_fraction
+        #global tail, set from full train set
+        self._tail_images = None
 
     #stack dataset into tensors
     def _stack(self, dataset: Dataset):
@@ -36,17 +38,29 @@ class EdgeCaseThreatModel(BaseThreatModel):
             labels.append(lbl)
         return torch.stack(images), torch.tensor(labels)
 
-    #relabel tail samples to target
-    def poison_dataset(self, dataset: Dataset, client_id: str = None) -> Dataset:
+    #tail images of source class
+    def _tail_from(self, dataset: Dataset):
         images, labels = self._stack(dataset)
         idx = tail_indices(images, labels, self.source_class, self.tail_fraction)
         if len(idx) == 0:
-            return TensorDataset(images[:0], labels[:0])
-        bd_images = images[idx].clone()
-        bd_labels = torch.full((len(idx),), self.target_label, dtype=labels.dtype)
-        return TensorDataset(bd_images, bd_labels)
+            return None
+        return images[idx].clone()
 
-    #clean plus relabeled tail
+    #precompute global tail for volume and train-test consistency
+    def set_reference_data(self, dataset: Dataset):
+        self._tail_images = self._tail_from(dataset)
+
+    #relabel tail to target, global tail preferred over local fallback
+    def poison_dataset(self, dataset: Dataset = None, client_id: str = None) -> Dataset:
+        tail = self._tail_images
+        if tail is None and dataset is not None:
+            tail = self._tail_from(dataset)
+        if tail is None or len(tail) == 0:
+            return TensorDataset(torch.empty(0, 3, 32, 32), torch.empty(0, dtype=torch.long))
+        bd_labels = torch.full((len(tail),), self.target_label, dtype=torch.long)
+        return TensorDataset(tail, bd_labels)
+
+    #clean partition plus relabeled global tail
     def build_malicious_trainset(self, dataset: Dataset, client_id: str = None) -> Dataset:
         images, labels = self._stack(dataset)
         poison = self.poison_dataset(dataset, client_id)
@@ -54,6 +68,6 @@ class EdgeCaseThreatModel(BaseThreatModel):
         all_labels = torch.cat([labels, poison.tensors[1]])
         return TensorDataset(all_images, all_labels)
 
-    #relabeled tail samples
+    #relabeled global tail
     def get_forget_set(self, dataset: Dataset, client_id: str = None) -> Dataset:
         return self.poison_dataset(dataset, client_id)
