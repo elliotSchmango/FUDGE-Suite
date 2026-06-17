@@ -74,7 +74,7 @@ All settings live in `ExperimentConfig` (`src/config.py`); roster rows override 
 |---|---|---|
 | `local_epochs` | 8 | client local epochs per round |
 | `client_lr` / `lr_cosine` | 0.03 / `True` | peak LR and cosine decay to 0 |
-| `seed` | 0 | reproducibility |
+| `seeds` | `[0]` | seed list. More than one reruns the pipeline and reports mean and std |
 
 **Run control**
 | Option | Default | |
@@ -87,3 +87,5 @@ All settings live in `ExperimentConfig` (`src/config.py`); roster rows override 
 ## Outputs
 
 `metrics_<row>.json` reports `pre_unlearn_*`, `post_unlearn_*`, `rfs_*`, optional `post_resurge_*` (BadFU), and `efficiency_*` (time, memory, storage, and speed relative to RFS). `benchmark_metrics.json` is the `gap_to_rfs` number for each attack.
+
+With more than one seed, each metric key holds the mean across seeds, and two extra keys appear per metric: `<metric>_std` (spread) and `<metric>_seeds` (the per-seed values). With one seed the file is unchanged.
