@@ -61,6 +61,9 @@ class ExperimentConfig:
     batch_size: int = BATCH_SIZE
     partitions_path: str = PARTITIONS_PATH
 
+    #per-round history cache, only fedraser-style unlearners need it
+    cache_history: bool = False
+
     #control baseline and caching
     run_rfs_baseline: bool = True
     use_cached_weights: bool = False

@@ -52,6 +52,7 @@ def federated_train(config, base_dataset, threat_model, benchmarker,
         on_fit_config_fn=fit_config_fn,
         initial_parameters=init_parameters,
         malicious_client_ids=mal_ids,
+        cache_history=config.cache_history,
     )
 
     client_fn = get_client_fn(

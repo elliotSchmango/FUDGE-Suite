@@ -99,7 +99,7 @@ main.py  --mode {test|single|attack|benchmark|aggregate}
 
 - Backdoor removal means client-level unlearning: forget the malicious client's contribution. This is horizontal FU.
 - RFS is the control run. It is a phase in the runner (retrain with the attack off), not a `BaseUnlearner`, because it retrains instead of cleaning an existing model.
-- `history_cache` (per-round client updates) exists only on fresh runs. FedEraser-style unlearners need it.
+- `history_cache` (per-round client updates) is off by default and turned on with `cache_history`, only for FedEraser-style unlearners that read it. PGA does not, so it stays empty and storage overhead is zero. Caching it every round otherwise grows to tens of GB and can OOM the workers.
 - FedAvg is fixed on purpose, so the backdoor gets in and the unlearner has something to remove. Swapping in robust aggregation would test prevention instead, and mix the two stages.
 
 ## 9. Source layout

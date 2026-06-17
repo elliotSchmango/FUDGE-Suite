@@ -4,9 +4,10 @@ import flwr as fl
 from flwr.common import parameters_to_ndarrays, ndarrays_to_parameters
 
 class FUDGEStrategy(fl.server.strategy.FedAvg):
-    def __init__(self, *args, malicious_client_ids=None, **kwargs):
+    def __init__(self, *args, malicious_client_ids=None, cache_history=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.global_weights = None
+        self.cache_history = cache_history
         self.history_cache = {}
         self.malicious_client_ids = [str(c) for c in (malicious_client_ids or [])]
 
@@ -43,17 +44,18 @@ class FUDGEStrategy(fl.server.strategy.FedAvg):
             #set weights equal to aggregated params
             self.global_weights = parameters_to_ndarrays(aggregated_parameters)
 
-            #store client updates
-            client_updates = [
-                parameters_to_ndarrays(fit_res.parameters)
-                for _, fit_res in results
-            ]
-            self.history_cache[server_round] = {
-                "global_weights": [np.copy(w) for w in self.global_weights],
-                "client_updates": [
-                    [np.copy(w) for w in update]
-                    for update in client_updates
-                ],
-            }
+            #cache per-round updates only when an unlearner needs them
+            if self.cache_history:
+                client_updates = [
+                    parameters_to_ndarrays(fit_res.parameters)
+                    for _, fit_res in results
+                ]
+                self.history_cache[server_round] = {
+                    "global_weights": [np.copy(w) for w in self.global_weights],
+                    "client_updates": [
+                        [np.copy(w) for w in update]
+                        for update in client_updates
+                    ],
+                }
 
         return aggregated_parameters, metrics

@@ -80,6 +80,7 @@ All settings live in `ExperimentConfig` (`src/config.py`); roster rows override 
 | Option | Default | |
 |---|---|---|
 | `run_rfs_baseline` | `True` | run the retrain-from-scratch control |
+| `cache_history` | `False` | store per-round updates, only for FedEraser-style unlearners |
 | `use_cached_weights` / `weights_cache_path` | `False` / (none) | skip training, load cached global weights |
 | `output_path` | `run_metrics.json` | per-run metrics file |
 
