@@ -142,9 +142,33 @@ def _build_unlearn_loaders(config, base_dataset, threat_model, model, device):
     return forget_loader, retain_loader
 
 
-#full benchmark pipeline
-def run_experiment(config):
-    _seed_everything(config.seed)
+#mean into raw key plus std and per-seed list
+def _aggregate_seeds(config, reports):
+    out = dict(reports[0])
+    if len(reports) == 1:
+        return out
+
+    config_keys = set(asdict(config).keys())
+    metric_keys = set()
+    for r in reports:
+        metric_keys |= set(r.keys()) - config_keys
+
+    for k in sorted(metric_keys):
+        vals = [
+            r[k] for r in reports
+            if isinstance(r.get(k), (int, float)) and not isinstance(r.get(k), bool)
+        ]
+        if not vals:
+            continue
+        out[k] = float(np.mean(vals))
+        out[f"{k}_std"] = float(np.std(vals))
+        out[f"{k}_seeds"] = [float(v) for v in vals]
+    return out
+
+
+#full pipeline for one seed
+def _run_seed(config, seed):
+    _seed_everything(seed)
     registry.import_builtins()
 
     #load and normalize CIFAR-10
@@ -170,11 +194,15 @@ def run_experiment(config):
     #shared device
     device = _get_device()
 
+    #per-seed weights cache path
+    cache_base, cache_ext = os.path.splitext(config.weights_cache_path)
+    seed_cache_path = f"{cache_base}_seed{seed}{cache_ext}"
+
     #attacked global weights from cache or fresh training
     strategy = None
-    if config.use_cached_weights and os.path.exists(config.weights_cache_path):
-        print(f"loading cached global weights from {config.weights_cache_path}")
-        cache = np.load(config.weights_cache_path, allow_pickle=True)
+    if config.use_cached_weights and os.path.exists(seed_cache_path):
+        print(f"loading cached global weights from {seed_cache_path}")
+        cache = np.load(seed_cache_path, allow_pickle=True)
         global_weights = [cache[f"arr_{i}"] for i in range(len(cache.files))]
     else:
         global_weights, strategy = federated_train(
@@ -184,8 +212,8 @@ def run_experiment(config):
             benchmarker=benchmarker,
             attack_enabled=config.attack_enabled,
         )
-        np.savez(config.weights_cache_path, *global_weights)
-        print(f"cached global weights to {config.weights_cache_path}")
+        np.savez(seed_cache_path, *global_weights)
+        print(f"cached global weights to {seed_cache_path}")
 
     #rfs control, attack disabled
     rfs_metrics = None
@@ -258,8 +286,21 @@ def run_experiment(config):
         for k, v in resurge_metrics.items():
             report[f"post_resurge_{k}"] = v
 
+    return report
+
+
+#aggregate seeds into one report
+def run_experiment(config):
+    reports = []
+    for seed in config.seeds:
+        if len(config.seeds) > 1:
+            print(f"\n===== seed {seed} =====")
+        reports.append(_run_seed(config, seed))
+
+    report = _aggregate_seeds(config, reports)
     with open(config.output_path, "w") as f:
         json.dump(report, f, indent=4)
     print(f"\nmetrics saved to {config.output_path}")
-
+    if len(config.seeds) > 1:
+        print(f"aggregated across {len(config.seeds)} seeds {config.seeds}")
     return report

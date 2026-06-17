@@ -47,8 +47,8 @@ class ExperimentConfig:
     resurgence_steps: int = 100
     resurgence_lr: float = 0.01
 
-    #seed for reproducible runs
-    seed: int = 0
+    #run seeds for error bars
+    seeds: List[int] = field(default_factory=lambda: [0])
 
     #client-side training, tuned within the locked round budget
     local_epochs: int = 8
@@ -61,7 +61,7 @@ class ExperimentConfig:
     batch_size: int = BATCH_SIZE
     partitions_path: str = PARTITIONS_PATH
 
-    #per-round history cache, only fedraser-style unlearners need it
+    #per-round cache only fedraser-style unlearners need
     cache_history: bool = False
 
     #control baseline and caching

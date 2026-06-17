@@ -75,6 +75,8 @@ Each run writes `metrics_<row>.json`. For every scorer it records:
 - `post_resurge_<m>`: BadFU only. ASR after a short benign fine-tune that checks for a hidden backdoor.
 - `efficiency_*`: cost numbers, measured by the suite itself (not a scorer, since cost is about the process). These are `unlearn_wall_s`, `unlearn_peak_mem_mb`, `rfs_wall_s`, `rfs_peak_mem_mb`, `rfs_comm_rounds`, `storage_overhead_bytes`, and the derived `wall_speedup`. The optional `unlearn_comm_rounds`, `unlearn_steps`, `unlearn_samples`, and `comm_round_fraction` appear only when an unlearner fills `context.cost`.
 
+When `seeds` has more than one value, the whole pipeline reruns once per seed. Each metric key then holds the mean across seeds, and `<metric>_std` and `<metric>_seeds` carry the spread and the raw per-seed values. With one seed the file is unchanged.
+
 `benchmark.py` combines the per-row files into `benchmark_metrics.json`: one `gap_to_rfs` number per attack. It does not average across different metrics.
 
 ## 7. Pipeline flow
@@ -84,14 +86,15 @@ main.py  --mode {test|single|attack|benchmark|aggregate}
   run_single_attack(name)
     attack_config(name)              #roster row to ExperimentConfig
     run_experiment(cfg):
-      1. load CIFAR-10, build threat model, scorers, Benchmarker
-      2. federated_train (attacked)  OR  load cached weights  ->  global model
-           (FUDGEStrategy forces the malicious clients every round, caches per-round history)
-      3. RFS control run: federated_train with the attack off            [timed]
-      4. build forget and retain loaders (set by the threat model)
-      5. unlearner.unlearn(...)                                          [timed]
-      6. Benchmarker report (pre/post/rfs) + optional resurgence probe + efficiency
-      7. write metrics_<row>.json
+      for seed in cfg.seeds:           #rerun the whole pipeline per seed
+        1. load CIFAR-10, build threat model, scorers, Benchmarker
+        2. federated_train (attacked)  OR  load cached weights  ->  global model
+             (FUDGEStrategy forces the malicious clients every round)
+        3. RFS control run: federated_train with the attack off          [timed]
+        4. build forget and retain loaders (set by the threat model)
+        5. unlearner.unlearn(...)                                        [timed]
+        6. Benchmarker report (pre/post/rfs) + optional resurgence probe + efficiency
+      7. aggregate seeds (mean, std) -> write metrics_<row>.json
   benchmark.py: combine metrics_*.json  ->  benchmark_metrics.json
 ```
 
@@ -101,6 +104,7 @@ main.py  --mode {test|single|attack|benchmark|aggregate}
 - RFS is the control run. It is a phase in the runner (retrain with the attack off), not a `BaseUnlearner`, because it retrains instead of cleaning an existing model.
 - `history_cache` (per-round client updates) is off by default and turned on with `cache_history`, only for FedEraser-style unlearners that read it. PGA does not, so it stays empty and storage overhead is zero. Caching it every round otherwise grows to tens of GB and can OOM the workers.
 - FedAvg is fixed on purpose, so the backdoor gets in and the unlearner has something to remove. Swapping in robust aggregation would test prevention instead, and mix the two stages.
+- Multiple seeds give error bars. `seeds` reruns the whole pipeline and reports mean and std. A single number is noisy: the per-round attack score swings run to run. The 50-client partition stays fixed at seed 42; only the training randomness (model init, client sampling, batch order) varies, so the spread reflects run-to-run noise on a fixed benchmark, not a different data split each time.
 
 ## 9. Source layout
 
