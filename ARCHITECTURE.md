@@ -60,11 +60,13 @@ The registry (`src/registry.py`) collects these by decorator; `import_builtins()
 | `dba_partial` | DBA (4 colluders, unlearn 1) | removal | a backdoor split across clients, unlearning only one | asr |
 | `dba_detected` | DBA (4 colluders, unlearn all) | removal | the same backdoor with all 4 attackers unlearned | asr |
 | `neurotoxin` | Neurotoxin | removal | a backdoor built to survive later training | asr |
-| `edgecase` | Edge-Case (CIFAR tail samples) | removal | a backdoor on rare, atypical inputs | edgecase_asr |
+| `edgecase` | Edge-Case (CIFAR tail samples) | removal | a backdoor on a rare class subpopulation held out of honest clients | edgecase_asr |
 | `badfu` | BadFU | exploitation | a hidden backdoor that the unlearning request turns on | asr (resurgence-graded) |
 | `fedmua` | FedMUA | exploitation | an unlearning request that makes the model misclassify a chosen class | misclassification |
 
 `dba_partial` unlearns only one of the four attacking clients; `dba_detected` unlearns all four. Comparing the two shows whether unlearning one client can clear a backdoor spread across several. It cannot: the other three contributions stay in the retain set.
+
+`edgecase` backdoors the rarest slice of a class, the tail, meaning the images farthest from the class mean. Those exact images are held out of every honest client and given only to the attacker, relabeled to the target. If honest clients kept them with their true labels, normal training would overwrite the backdoor every round and it would never persist. Holding them out matches the original Attack of the Tails, where the edge data is out of distribution and honest clients never see it, adapted here to stay inside CIFAR-10. The control run omits the tail too, so it stands for a world where the attacker never existed.
 
 ## 6. Metrics and outputs
 
@@ -105,6 +107,7 @@ main.py  --mode {test|single|attack|benchmark|aggregate}
 - `history_cache` (per-round client updates) is off by default and turned on with `cache_history`, only for FedEraser-style unlearners that read it. PGA does not, so it stays empty and storage overhead is zero. Caching it every round otherwise grows to tens of GB and can OOM the workers.
 - FedAvg is fixed on purpose, so the backdoor gets in and the unlearner has something to remove. Swapping in robust aggregation would test prevention instead, and mix the two stages.
 - Multiple seeds give error bars. `seeds` reruns the whole pipeline and reports mean and std. A single number is noisy: the per-round attack score swings run to run. The 50-client partition stays fixed at seed 42; only the training randomness (model init, client sampling, batch order) varies, so the spread reflects run-to-run noise on a fixed benchmark, not a different data split each time.
+- An attack can hold a subpopulation out of the honest clients. A threat model reports `holdout_indices()`, and those samples are dropped from every honest partition, the retain set, and the control run, so they belong only to the attacker. Edge-Case uses this for durability: if the honest clients kept the tail images with true labels, they would scrub the backdoor each round. The default is empty, so other attacks are unaffected.
 
 ## 9. Source layout
 
