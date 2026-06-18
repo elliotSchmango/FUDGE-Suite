@@ -28,6 +28,7 @@ class EdgeCaseThreatModel(BaseThreatModel):
         self.tail_fraction = tail_fraction
         #global tail, set from full train set
         self._tail_images = None
+        self._tail_idx = []
 
     #stack dataset into tensors
     def _stack(self, dataset: Dataset):
@@ -48,7 +49,19 @@ class EdgeCaseThreatModel(BaseThreatModel):
 
     #precompute global tail for volume and train-test consistency
     def set_reference_data(self, dataset: Dataset):
-        self._tail_images = self._tail_from(dataset)
+        images, labels = self._stack(dataset)
+        idx = tail_indices(images, labels, self.source_class, self.tail_fraction)
+        if len(idx) == 0:
+            self._tail_images = None
+            self._tail_idx = []
+            return
+        self._tail_images = images[idx].clone()
+        #global indices held out of honest clients
+        self._tail_idx = [int(i) for i in idx]
+
+    #tail indices owned only by attacker
+    def holdout_indices(self):
+        return self._tail_idx
 
     #relabel tail to target, global tail preferred over local fallback
     def poison_dataset(self, dataset: Dataset = None, client_id: str = None) -> Dataset:

@@ -107,6 +107,8 @@ def _benign_finetune(model, retain_loader, device, steps, lr):
 #build forget and retain loaders, unlearn one client or all colluders
 def _build_unlearn_loaders(config, base_dataset, threat_model, model, device):
     unlearn_ids = [str(c) for c in (config.unlearn_client_ids or [config.unlearn_client_id])]
+    #edge tail absent from honest retain data
+    holdout = threat_model.holdout_indices() if threat_model is not None else []
 
     #union forget set across unlearned clients
     forget_parts = []
@@ -133,6 +135,7 @@ def _build_unlearn_loaders(config, base_dataset, threat_model, model, device):
                 client_id=str(cid),
                 partitions_path=config.partitions_path,
                 base_dataset=base_dataset,
+                exclude_indices=holdout,
             )
         )
     retain_dataset = ConcatDataset(retain_partitions)
@@ -186,9 +189,12 @@ def _run_seed(config, seed):
 
     #threat model first so scorers match trigger
     threat_model = registry.build_threat_model(config) if config.attack_enabled else None
+    holdout = []
     if threat_model is not None:
         #full train set for global-subpopulation attacks
         threat_model.set_reference_data(base_dataset)
+        #edge tail held out of honest data, also from rfs control
+        holdout = threat_model.holdout_indices()
 
     #standardized eval suite
     scorers = registry.build_scorers(config, threat_model)
@@ -214,6 +220,7 @@ def _run_seed(config, seed):
             threat_model=threat_model,
             benchmarker=benchmarker,
             attack_enabled=config.attack_enabled,
+            holdout_indices=holdout,
         )
         np.savez(seed_cache_path, *global_weights)
         print(f"cached global weights to {seed_cache_path}")
@@ -224,7 +231,7 @@ def _run_seed(config, seed):
     if config.run_rfs_baseline:
         print("\nrunning retrain-from-scratch control baseline")
         with CostMeter(device) as rfs_cost:
-            rfs_weights = run_rfs_baseline(config, base_dataset, benchmarker)
+            rfs_weights = run_rfs_baseline(config, base_dataset, benchmarker, holdout_indices=holdout)
         rfs_metrics = benchmarker.run_audit(rfs_weights, label="rfs-baseline")
 
     print("\nfederated training complete. starting unlearning phase.")

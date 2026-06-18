@@ -12,7 +12,7 @@ from src.client import get_client_fn
 
 #run federated training, return global weights
 def federated_train(config, base_dataset, threat_model, benchmarker,
-                    attack_enabled=True, label_prefix=""):
+                    attack_enabled=True, label_prefix="", holdout_indices=None):
     ray.shutdown()
 
     #disable attacker for rfs
@@ -64,6 +64,7 @@ def federated_train(config, base_dataset, threat_model, benchmarker,
         batch_size=config.batch_size,
         lr=config.client_lr,
         amplification_factor=config.amplification_factor,
+        holdout_indices=holdout_indices,
     )
 
     print(f"{label_prefix}starting flwr simulation on cluster node")

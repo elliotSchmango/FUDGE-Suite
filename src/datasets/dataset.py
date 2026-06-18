@@ -5,18 +5,24 @@ from torch.utils.data import Dataset
 
 class ProgrammaticBackdoorDataset(Dataset):
     #client partition dataset
-    def __init__(self, client_id, partitions_path, base_dataset, transform=None):
+    def __init__(self, client_id, partitions_path, base_dataset, transform=None,
+                 exclude_indices=None):
         self.client_id = str(client_id)
         self.partitions_path = partitions_path
         self.base_dataset = base_dataset
         self.transform = transform
-        
+
         #load partitions
         with open(self.partitions_path, 'r') as f:
             partitions = json.load(f)
-            
+
         #client global indices
         self.indices = partitions[self.client_id]
+
+        #hold out edge subpopulation from honest clients
+        if exclude_indices:
+            excl = set(exclude_indices)
+            self.indices = [i for i in self.indices if i not in excl]
         
     #get dataset length
     def __len__(self):

@@ -28,6 +28,10 @@ class BaseThreatModel(ABC):
     def set_reference_data(self, dataset):
         pass
 
+    #global indices held out of honest clients, default none
+    def holdout_indices(self):
+        return []
+
     #which clients attack
     def is_malicious(self, client_id: str, configured_malicious_id: str) -> bool:
         return str(client_id) == str(configured_malicious_id)

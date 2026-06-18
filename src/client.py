@@ -17,6 +17,7 @@ def get_client_fn(
     lr: float = 0.01,
     momentum: float = 0.9,
     amplification_factor: float = 1.0,
+    holdout_indices=None,
 ):
     #pass variables to client instance
     def client_fn(cid: str):
@@ -31,6 +32,7 @@ def get_client_fn(
             lr=lr,
             momentum=momentum,
             amplification_factor=amplification_factor,
+            holdout_indices=holdout_indices,
         )
     return client_fn
 
@@ -49,6 +51,7 @@ class FUDGEClient(fl.client.NumPyClient):
         lr: float,
         momentum: float,
         amplification_factor: float = 1.0,
+        holdout_indices=None,
     ):
         self.cid = cid
         self.local_epochs = local_epochs
@@ -60,11 +63,12 @@ class FUDGEClient(fl.client.NumPyClient):
         self.threat_model = threat_model
         self.amplification_factor = amplification_factor
 
-        #build client partition
+        #build client partition, edge tail held out of honest data
         self.partition = ProgrammaticBackdoorDataset(
             client_id=cid,
             partitions_path=partitions_path,
             base_dataset=base_dataset,
+            exclude_indices=holdout_indices,
         )
 
         #threat model picks attacking clients
