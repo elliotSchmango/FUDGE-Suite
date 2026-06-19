@@ -94,10 +94,13 @@ def build_asr(config, threat_model=None):
 
 #edge-case success
 class EdgeCaseASRScorer(BaseScorer):
-    def __init__(self, target_label: int, source_class: int, tail_fraction: float):
+    def __init__(self, target_label: int, source_class: int, tail_fraction: float, reference_model):
         self.target_label = target_label
         self.source_class = source_class
         self.tail_fraction = tail_fraction
+        self.reference_model = reference_model
+        #fixed test tail cached on first eval
+        self._tail_imgs = None
 
     @property
     def name(self) -> str:
@@ -105,28 +108,32 @@ class EdgeCaseASRScorer(BaseScorer):
 
     def evaluate(self, model, dataloader, device) -> float:
         from src.threat_models.edgecase_attack import tail_indices
-        #gather full test set
-        imgs, lbls = [], []
-        for images, labels in dataloader:
-            imgs.append(images)
-            lbls.append(labels)
-        imgs, lbls = torch.cat(imgs), torch.cat(lbls)
-        idx = tail_indices(imgs, lbls, self.source_class, self.tail_fraction)
-        if len(idx) == 0:
+        if self._tail_imgs is None:
+            #gather full test set, pick same tail as attacker
+            imgs, lbls = [], []
+            for images, labels in dataloader:
+                imgs.append(images)
+                lbls.append(labels)
+            imgs, lbls = torch.cat(imgs), torch.cat(lbls)
+            idx = tail_indices(imgs, lbls, self.source_class, self.tail_fraction, self.reference_model)
+            self._tail_imgs = imgs[idx].clone() if len(idx) > 0 else imgs[:0]
+        if len(self._tail_imgs) == 0:
             return 0.0
 
         model.eval()
         with torch.no_grad():
-            preds = torch.max(model(imgs[idx].to(device)), 1)[1]
+            preds = torch.max(model(self._tail_imgs.to(device)), 1)[1]
         return (preds == self.target_label).float().mean().item()
 
 
 @register_scorer("edgecase_asr")
 def build_edgecase_asr(config, threat_model=None):
+    from src.datasets.reference_model import load_reference_model
     return EdgeCaseASRScorer(
         target_label=config.target_label,
         source_class=threat_model.source_class,
         tail_fraction=threat_model.tail_fraction,
+        reference_model=load_reference_model(),
     )
 
 

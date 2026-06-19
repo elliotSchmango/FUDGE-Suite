@@ -3,19 +3,36 @@ import torch
 from torch.utils.data import Dataset, TensorDataset
 from .base import BaseThreatModel
 from src.registry import register_threat_model
+from src.datasets.reference_model import load_reference_model
 
 
-#tail samples farthest from pixel centroid
-def tail_indices(images, labels, source_class, tail_fraction):
+#pick best available device
+def _device():
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
+
+#lowest-confidence source-class samples under reference model
+def tail_indices(images, labels, source_class, tail_fraction, model):
     src = (labels == source_class).nonzero(as_tuple=True)[0]
     if len(src) == 0:
         return src
-    flat = images[src].flatten(1)
-    centroid = flat.mean(dim=0, keepdim=True)
-    dist = torch.norm(flat - centroid, dim=1)
+    device = _device()
+    model = model.to(device).eval()
+    probs = []
+    with torch.no_grad():
+        for i in range(0, len(src), 512):
+            batch = images[src[i:i + 512]].to(device)
+            p = torch.softmax(model(batch), dim=1)[:, source_class].cpu()
+            probs.append(p)
+    probs = torch.cat(probs)
+    #least confident are the most atypical
     k = max(1, int(len(src) * tail_fraction))
-    far = torch.topk(dist, k).indices
-    return src[far]
+    low = torch.topk(probs, k, largest=False).indices
+    return src[low]
 
 
 #edge-case backdoor
@@ -29,6 +46,7 @@ class EdgeCaseThreatModel(BaseThreatModel):
         #global tail, set from full train set
         self._tail_images = None
         self._tail_idx = []
+        self._ref_model = None
 
     #stack dataset into tensors
     def _stack(self, dataset: Dataset):
@@ -39,18 +57,21 @@ class EdgeCaseThreatModel(BaseThreatModel):
             labels.append(lbl)
         return torch.stack(images), torch.tensor(labels)
 
-    #tail images of source class
-    def _tail_from(self, dataset: Dataset):
+    #lazy-load shared reference model
+    def _ref(self):
+        if self._ref_model is None:
+            self._ref_model = load_reference_model()
+        return self._ref_model
+
+    #stacked images and tail indices over a dataset
+    def _select_tail(self, dataset: Dataset):
         images, labels = self._stack(dataset)
-        idx = tail_indices(images, labels, self.source_class, self.tail_fraction)
-        if len(idx) == 0:
-            return None
-        return images[idx].clone()
+        idx = tail_indices(images, labels, self.source_class, self.tail_fraction, self._ref())
+        return images, idx
 
     #precompute global tail for volume and train-test consistency
     def set_reference_data(self, dataset: Dataset):
-        images, labels = self._stack(dataset)
-        idx = tail_indices(images, labels, self.source_class, self.tail_fraction)
+        images, idx = self._select_tail(dataset)
         if len(idx) == 0:
             self._tail_images = None
             self._tail_idx = []
@@ -67,7 +88,8 @@ class EdgeCaseThreatModel(BaseThreatModel):
     def poison_dataset(self, dataset: Dataset = None, client_id: str = None) -> Dataset:
         tail = self._tail_images
         if tail is None and dataset is not None:
-            tail = self._tail_from(dataset)
+            images, idx = self._select_tail(dataset)
+            tail = images[idx].clone() if len(idx) > 0 else None
         if tail is None or len(tail) == 0:
             return TensorDataset(torch.empty(0, 3, 32, 32), torch.empty(0, dtype=torch.long))
         bd_labels = torch.full((len(tail),), self.target_label, dtype=torch.long)

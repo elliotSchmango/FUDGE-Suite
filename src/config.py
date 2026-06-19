@@ -8,6 +8,8 @@ NUM_ROUNDS = 50
 DIRICHLET_ALPHA = 0.25
 BATCH_SIZE = 64
 PARTITIONS_PATH = "src/datasets/partitions.json"
+#clean model for atypicality-based edge tail selection
+REFERENCE_MODEL_PATH = "src/datasets/reference_model.pt"
 
 #cifar-10 normalization stats
 CIFAR10_MEAN = (0.4914, 0.4822, 0.4465)
