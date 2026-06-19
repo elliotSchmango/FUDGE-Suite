@@ -308,6 +308,9 @@ def run_experiment(config):
         reports.append(_run_seed(config, seed))
 
     report = _aggregate_seeds(config, reports)
+    out_dir = os.path.dirname(config.output_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
     with open(config.output_path, "w") as f:
         json.dump(report, f, indent=4)
     print(f"\nmetrics saved to {config.output_path}")

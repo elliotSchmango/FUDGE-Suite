@@ -77,7 +77,7 @@ def attack_config(attack_name, base_config=None, roster=None):
     overrides = {k: v for k, v in spec.items() if k != "name"}
     return replace(
         base_config,
-        output_path=f"metrics_{attack_name}.json",
+        output_path=f"results/metrics_{attack_name}.json",
         weights_cache_path=f"cache_{attack_name}.npz",
         **overrides,
     )
@@ -96,7 +96,7 @@ def aggregate_from_files(roster=None, output_path="benchmark_metrics.json"):
     results = {}
     for spec in roster:
         attack = spec["name"]
-        path = f"metrics_{attack}.json"
+        path = f"results/metrics_{attack}.json"
         if os.path.exists(path):
             with open(path) as f:
                 results[attack] = json.load(f)

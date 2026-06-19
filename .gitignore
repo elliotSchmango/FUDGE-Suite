@@ -4,18 +4,18 @@ __pycache__/
 *.pyc
 src/**/*.pyc
 
-#data & run artifacts
+#data & run artifacts (keep metrics json as tracked evidence; weights caches stay out)
 data/
 logs/
 *.npz
-metrics_*.json
 run_metrics.json
-benchmark_metrics.json
+sweep_*.json
 
 #local working docs & references
 archive/
 literature/
 notes_for_fudge_paper.md
+task_plan.md
 
 #os
 .DS_Store
