@@ -299,8 +299,15 @@ def _run_seed(config, seed):
     #use durability probe to eval backdoor after the attacker leaves at attack_stop_round
     if config.attack_stop_round is not None and strategy is not None:
         traj = strategy.asr_trajectory
-        asr_stop = traj.get(config.attack_stop_round)
-        asr_final = traj.get(config.num_rounds)
+
+        #per-round asr swings hard, so average a 5-round window instead of one round
+        def _window_mean(lo, hi):
+            vals = [traj[r] for r in range(lo, hi + 1) if traj.get(r) is not None]
+            return sum(vals) / len(vals) if vals else None
+
+        #last 5 attacked rounds (the plateau) vs last 5 cooldown rounds (the survivor)
+        asr_stop = _window_mean(config.attack_stop_round - 4, config.attack_stop_round)
+        asr_final = _window_mean(config.num_rounds - 4, config.num_rounds)
         report["durability_asr_at_stop"] = asr_stop
         report["durability_asr_final"] = asr_final
         if asr_stop:

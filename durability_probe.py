@@ -20,7 +20,7 @@ def main():
             attack_stop_round=STOP_ROUND,
             lr_cosine=False,
             run_rfs_baseline=False,
-            seeds=[0],
+            seeds=[0, 1, 2],
             output_path=f"results/durability_{name}.json",
             weights_cache_path=f"durability_{name}.npz",
         )
