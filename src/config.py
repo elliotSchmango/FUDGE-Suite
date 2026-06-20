@@ -44,6 +44,9 @@ class ExperimentConfig:
     #multi-client unlearn scope, none = single unlearn_client_id
     unlearn_client_ids: List[str] = None
 
+    #stop attack at round attack_stop_round
+    attack_stop_round: int = None
+
     #resurgence probe
     resurgence_probe: bool = False
     resurgence_steps: int = 100

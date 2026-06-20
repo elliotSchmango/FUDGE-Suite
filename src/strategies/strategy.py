@@ -4,22 +4,38 @@ import flwr as fl
 from flwr.common import parameters_to_ndarrays, ndarrays_to_parameters
 
 class FUDGEStrategy(fl.server.strategy.FedAvg):
-    def __init__(self, *args, malicious_client_ids=None, cache_history=False, **kwargs):
+    def __init__(self, *args, malicious_client_ids=None, cache_history=False,
+                 attack_stop_round=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.global_weights = None
         self.cache_history = cache_history
         self.history_cache = {}
         self.malicious_client_ids = [str(c) for c in (malicious_client_ids or [])]
+        #attack stops at this round inclusive; strategy will not sample attackers starting from server_round = attack_stop_round + 1
+        self.attack_stop_round = attack_stop_round
+        #per-round asr filled by the evaluate hook
+        self.asr_trajectory = {}
 
     def configure_fit(self, server_round, parameters, client_manager):
         #fedavg sampling
         pairs = super().configure_fit(server_round, parameters, client_manager)
 
-        #force every saboteur into the round, each in its own slot
         if not self.malicious_client_ids or not pairs:
             return pairs
 
         all_clients = client_manager.all()
+
+        #cooldown: once the attacker has left, swap any sampled saboteur for a benign client
+        if self.attack_stop_round is not None and server_round > self.attack_stop_round:
+            used = {client.cid for client, _ in pairs}
+            spare = [cid for cid in all_clients
+                     if cid not in self.malicious_client_ids and cid not in used]
+            for i, (client, fitins) in enumerate(pairs):
+                if client.cid in self.malicious_client_ids and spare:
+                    pairs[i] = (all_clients[spare.pop()], fitins)
+            return pairs
+
+        #force every saboteur into the round, each in its own slot
         sampled = {client.cid for client, _ in pairs}
         slot = 0
         for mid in self.malicious_client_ids:

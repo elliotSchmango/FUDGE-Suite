@@ -32,6 +32,8 @@ def federated_train(config, base_dataset, threat_model, benchmarker,
     def evaluate_fn(server_round, parameters, cfg):
         weights = [np.copy(p) for p in parameters]
         metrics = benchmarker.run_audit(weights, label=f"{label_prefix}[round {server_round}]")
+        #record asr per round for the durability probe
+        strategy.asr_trajectory[server_round] = metrics.get("asr")
         return 0.0, metrics
 
     #cosine lr decay across rounds
@@ -53,6 +55,7 @@ def federated_train(config, base_dataset, threat_model, benchmarker,
         initial_parameters=init_parameters,
         malicious_client_ids=mal_ids,
         cache_history=config.cache_history,
+        attack_stop_round=config.attack_stop_round,
     )
 
     client_fn = get_client_fn(

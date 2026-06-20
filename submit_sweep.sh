@@ -48,5 +48,5 @@ else
     echo "reusing existing reference_model.pt"
 fi
 
-echo "running edge-case amplification sweep"
-uv run python oscillation_sweep.py
+echo "running durability probe (badnets vs neurotoxin cooldown)"
+uv run python durability_probe.py

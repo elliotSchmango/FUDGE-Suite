@@ -296,6 +296,16 @@ def _run_seed(config, seed):
         for k, v in resurge_metrics.items():
             report[f"post_resurge_{k}"] = v
 
+    #use durability probe to eval backdoor after the attacker leaves at attack_stop_round
+    if config.attack_stop_round is not None and strategy is not None:
+        traj = strategy.asr_trajectory
+        asr_stop = traj.get(config.attack_stop_round)
+        asr_final = traj.get(config.num_rounds)
+        report["durability_asr_at_stop"] = asr_stop
+        report["durability_asr_final"] = asr_final
+        if asr_stop:
+            report["durability_retention"] = asr_final / asr_stop
+
     return report
 
 
