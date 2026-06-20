@@ -1,0 +1,54 @@
+{
+    "threat_model": "neurotoxin",
+    "threat_model_args": {
+        "mask_ratio": 0.1
+    },
+    "unlearner": "pga",
+    "unlearner_args": {
+        "epochs": 10,
+        "lr": 0.01,
+        "projection_radius": 2.0,
+        "retain_enabled": true
+    },
+    "scorers": [
+        "accuracy",
+        "asr"
+    ],
+    "target_label": 0,
+    "poison_ratio": 0.5,
+    "amplification_factor": 4.0,
+    "patch_size": 3,
+    "attack_enabled": true,
+    "malicious_client_id": "0",
+    "unlearn_client_id": "0",
+    "unlearn_client_ids": null,
+    "attack_stop_round": 40,
+    "resurgence_probe": false,
+    "resurgence_steps": 100,
+    "resurgence_lr": 0.01,
+    "seeds": [
+        0
+    ],
+    "local_epochs": 8,
+    "client_lr": 0.03,
+    "lr_cosine": true,
+    "num_clients": 50,
+    "num_rounds": 50,
+    "batch_size": 64,
+    "partitions_path": "src/datasets/partitions.json",
+    "cache_history": false,
+    "run_rfs_baseline": false,
+    "use_cached_weights": false,
+    "weights_cache_path": "durability_neurotoxin.npz",
+    "output_path": "results/durability_neurotoxin.json",
+    "pre_unlearn_accuracy": 0.6371,
+    "pre_unlearn_asr": 0.68,
+    "post_unlearn_accuracy": 0.6298,
+    "post_unlearn_asr": 0.24811111111111112,
+    "efficiency_unlearn_wall_s": 1.2410196911077946,
+    "efficiency_unlearn_peak_mem_mb": 472.036864,
+    "efficiency_storage_overhead_bytes": 0,
+    "durability_asr_at_stop": 0.7332222222222222,
+    "durability_asr_final": 0.68,
+    "durability_retention": 0.9274132444309745
+}

@@ -5,7 +5,9 @@ from src.benchmark import attack_config
 from src.runner import run_experiment
 
 #attacker forced through this round, then benign rounds let the backdoor decay
-STOP_ROUND = 40
+#stop early so the cooldown overlaps active honest learning, with a flat lr so those
+#rounds actually train (cosine decay would leave the tail near zero and erode nothing)
+STOP_ROUND = 25
 ATTACKS = ["badnets", "neurotoxin"]
 
 
@@ -16,6 +18,7 @@ def main():
         cfg = replace(
             attack_config(name),
             attack_stop_round=STOP_ROUND,
+            lr_cosine=False,
             run_rfs_baseline=False,
             seeds=[0],
             output_path=f"results/durability_{name}.json",
