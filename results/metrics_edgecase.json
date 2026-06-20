@@ -1,0 +1,123 @@
+{
+    "threat_model": "edgecase",
+    "threat_model_args": {
+        "source_class": 1,
+        "tail_fraction": 0.1
+    },
+    "unlearner": "pga",
+    "unlearner_args": {
+        "epochs": 10,
+        "lr": 0.01,
+        "projection_radius": 2.0,
+        "retain_enabled": true
+    },
+    "scorers": [
+        "accuracy",
+        "edgecase_asr"
+    ],
+    "target_label": 0,
+    "poison_ratio": 0.5,
+    "amplification_factor": 4.0,
+    "patch_size": 3,
+    "attack_enabled": true,
+    "malicious_client_id": "0",
+    "unlearn_client_id": "0",
+    "unlearn_client_ids": null,
+    "resurgence_probe": false,
+    "resurgence_steps": 100,
+    "resurgence_lr": 0.01,
+    "seeds": [
+        0,
+        1
+    ],
+    "local_epochs": 8,
+    "client_lr": 0.03,
+    "lr_cosine": true,
+    "num_clients": 50,
+    "num_rounds": 50,
+    "batch_size": 64,
+    "partitions_path": "src/datasets/partitions.json",
+    "cache_history": false,
+    "run_rfs_baseline": true,
+    "use_cached_weights": false,
+    "weights_cache_path": "cache_edgecase.npz",
+    "output_path": "results/metrics_edgecase.json",
+    "pre_unlearn_accuracy": 0.6325000000000001,
+    "pre_unlearn_asr": 0.2149999961256981,
+    "post_unlearn_accuracy": 0.6262000000000001,
+    "post_unlearn_asr": 0.02999999839812517,
+    "rfs_accuracy": 0.64785,
+    "rfs_asr": 0.07499999925494194,
+    "efficiency_unlearn_wall_s": 2.4889421564294025,
+    "efficiency_unlearn_peak_mem_mb": 560.292864,
+    "efficiency_storage_overhead_bytes": 0.0,
+    "efficiency_rfs_wall_s": 772.4908695240738,
+    "efficiency_rfs_peak_mem_mb": 281.986048,
+    "efficiency_rfs_comm_rounds": 50.0,
+    "efficiency_wall_speedup": 310.60155214911333,
+    "efficiency_rfs_comm_rounds_std": 0.0,
+    "efficiency_rfs_comm_rounds_seeds": [
+        50.0,
+        50.0
+    ],
+    "efficiency_rfs_peak_mem_mb_std": 4.325376000000006,
+    "efficiency_rfs_peak_mem_mb_seeds": [
+        277.660672,
+        286.311424
+    ],
+    "efficiency_rfs_wall_s_std": 0.8988357739290223,
+    "efficiency_rfs_wall_s_seeds": [
+        771.5920337501448,
+        773.3897052980028
+    ],
+    "efficiency_storage_overhead_bytes_std": 0.0,
+    "efficiency_storage_overhead_bytes_seeds": [
+        0.0,
+        0.0
+    ],
+    "efficiency_unlearn_peak_mem_mb_std": 0.06553599999995185,
+    "efficiency_unlearn_peak_mem_mb_seeds": [
+        560.3584,
+        560.227328
+    ],
+    "efficiency_unlearn_wall_s_std": 0.0666500924853608,
+    "efficiency_unlearn_wall_s_seeds": [
+        2.5555922489147633,
+        2.4222920639440417
+    ],
+    "efficiency_wall_speedup_std": 8.678569686710489,
+    "efficiency_wall_speedup_seeds": [
+        301.92298246240284,
+        319.2801218358238
+    ],
+    "post_unlearn_accuracy_std": 0.01050000000000001,
+    "post_unlearn_accuracy_seeds": [
+        0.6367,
+        0.6157
+    ],
+    "post_unlearn_asr_std": 0.01999999862164259,
+    "post_unlearn_asr_seeds": [
+        0.04999999701976776,
+        0.009999999776482582
+    ],
+    "pre_unlearn_accuracy_std": 0.005599999999999994,
+    "pre_unlearn_accuracy_seeds": [
+        0.6381,
+        0.6269
+    ],
+    "pre_unlearn_asr_std": 0.02499999850988388,
+    "pre_unlearn_asr_seeds": [
+        0.23999999463558197,
+        0.1899999976158142
+    ],
+    "rfs_accuracy_std": 0.006450000000000011,
+    "rfs_accuracy_seeds": [
+        0.6414,
+        0.6543
+    ],
+    "rfs_asr_std": 0.004999998956918716,
+    "rfs_asr_seeds": [
+        0.07000000029802322,
+        0.07999999821186066
+    ]
+}
