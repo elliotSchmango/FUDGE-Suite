@@ -25,7 +25,9 @@
     "resurgence_steps": 100,
     "resurgence_lr": 0.01,
     "seeds": [
-        0
+        0,
+        1,
+        2
     ],
     "local_epochs": 8,
     "client_lr": 0.03,
@@ -39,14 +41,74 @@
     "use_cached_weights": false,
     "weights_cache_path": "durability_badnets.npz",
     "output_path": "results/durability_badnets.json",
-    "pre_unlearn_accuracy": 0.5645,
-    "pre_unlearn_asr": 0.2768888888888889,
-    "post_unlearn_accuracy": 0.6151,
-    "post_unlearn_asr": 0.08,
-    "efficiency_unlearn_wall_s": 1.3976324109826237,
-    "efficiency_unlearn_peak_mem_mb": 470.85568,
-    "efficiency_storage_overhead_bytes": 0,
-    "durability_asr_at_stop": 0.7581111111111111,
-    "durability_asr_final": 0.2768888888888889,
-    "durability_retention": 0.3652352337681372
+    "pre_unlearn_accuracy": 0.59,
+    "pre_unlearn_asr": 0.5358148148148149,
+    "post_unlearn_accuracy": 0.6176333333333334,
+    "post_unlearn_asr": 0.29314814814814816,
+    "efficiency_unlearn_wall_s": 1.3273093719035387,
+    "efficiency_unlearn_peak_mem_mb": 471.64313599999997,
+    "efficiency_storage_overhead_bytes": 0.0,
+    "durability_asr_at_stop": 0.23871111111111112,
+    "durability_asr_final": 0.5421703703703704,
+    "durability_retention": 2.841646535567797,
+    "durability_asr_at_stop_std": 0.08561876068403444,
+    "durability_asr_at_stop_seeds": [
+        0.2935777777777778,
+        0.30475555555555556,
+        0.11779999999999999
+    ],
+    "durability_asr_final_std": 0.059380617400866524,
+    "durability_asr_final_seeds": [
+        0.4608888888888889,
+        0.5645333333333333,
+        0.6010888888888889
+    ],
+    "durability_retention_std": 1.6029058969787242,
+    "durability_retention_seeds": [
+        1.569903867988797,
+        1.8524135919498323,
+        5.102622146764762
+    ],
+    "efficiency_storage_overhead_bytes_std": 0.0,
+    "efficiency_storage_overhead_bytes_seeds": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "efficiency_unlearn_peak_mem_mb_std": 0.5568154774860214,
+    "efficiency_unlearn_peak_mem_mb_seeds": [
+        470.85568,
+        472.036864,
+        472.036864
+    ],
+    "efficiency_unlearn_wall_s_std": 0.11125302701326173,
+    "efficiency_unlearn_wall_s_seeds": [
+        1.4844696559011936,
+        1.2422997758258134,
+        1.255158683983609
+    ],
+    "post_unlearn_accuracy_std": 0.019171912325645094,
+    "post_unlearn_accuracy_seeds": [
+        0.6107,
+        0.5984,
+        0.6438
+    ],
+    "post_unlearn_asr_std": 0.16126047567550195,
+    "post_unlearn_asr_seeds": [
+        0.07811111111111112,
+        0.46644444444444444,
+        0.3348888888888889
+    ],
+    "pre_unlearn_accuracy_std": 0.04202784791064132,
+    "pre_unlearn_accuracy_seeds": [
+        0.5621,
+        0.5585,
+        0.6494
+    ],
+    "pre_unlearn_asr_std": 0.22244237859945254,
+    "pre_unlearn_asr_seeds": [
+        0.25666666666666665,
+        0.801,
+        0.5497777777777778
+    ]
 }

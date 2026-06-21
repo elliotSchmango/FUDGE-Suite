@@ -27,7 +27,9 @@
     "resurgence_steps": 100,
     "resurgence_lr": 0.01,
     "seeds": [
-        0
+        0,
+        1,
+        2
     ],
     "local_epochs": 8,
     "client_lr": 0.03,
@@ -41,14 +43,74 @@
     "use_cached_weights": false,
     "weights_cache_path": "durability_neurotoxin.npz",
     "output_path": "results/durability_neurotoxin.json",
-    "pre_unlearn_accuracy": 0.5752,
-    "pre_unlearn_asr": 0.3184444444444444,
-    "post_unlearn_accuracy": 0.6095,
-    "post_unlearn_asr": 0.07788888888888888,
-    "efficiency_unlearn_wall_s": 1.2314285119064152,
+    "pre_unlearn_accuracy": 0.6184333333333333,
+    "pre_unlearn_asr": 0.6221851851851853,
+    "post_unlearn_accuracy": 0.6279666666666667,
+    "post_unlearn_asr": 0.30014814814814816,
+    "efficiency_unlearn_wall_s": 1.2559920530766249,
     "efficiency_unlearn_peak_mem_mb": 472.036864,
-    "efficiency_storage_overhead_bytes": 0,
-    "durability_asr_at_stop": 0.7161111111111111,
-    "durability_asr_final": 0.3184444444444444,
-    "durability_retention": 0.4446858029480217
+    "efficiency_storage_overhead_bytes": 0.0,
+    "durability_asr_at_stop": 0.217162962962963,
+    "durability_asr_final": 0.594288888888889,
+    "durability_retention": 3.852121941729718,
+    "durability_asr_at_stop_std": 0.09295579609381464,
+    "durability_asr_at_stop_seeds": [
+        0.2796666666666667,
+        0.2860666666666667,
+        0.08575555555555556
+    ],
+    "durability_asr_final_std": 0.038818721884218234,
+    "durability_asr_final_seeds": [
+        0.553711111111111,
+        0.5825555555555556,
+        0.6466000000000001
+    ],
+    "durability_retention_std": 2.6078513764092643,
+    "durability_retention_seeds": [
+        1.9798967024235197,
+        2.036432843936922,
+        7.540036278828713
+    ],
+    "efficiency_storage_overhead_bytes_std": 0.0,
+    "efficiency_storage_overhead_bytes_seeds": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "efficiency_unlearn_peak_mem_mb_std": 0.0,
+    "efficiency_unlearn_peak_mem_mb_seeds": [
+        472.036864,
+        472.036864,
+        472.036864
+    ],
+    "efficiency_unlearn_wall_s_std": 0.010772233496674468,
+    "efficiency_unlearn_wall_s_seeds": [
+        1.2706441630143672,
+        1.2450537581462413,
+        1.252278238069266
+    ],
+    "post_unlearn_accuracy_std": 0.007792446485040655,
+    "post_unlearn_accuracy_seeds": [
+        0.6208,
+        0.6243,
+        0.6388
+    ],
+    "post_unlearn_asr_std": 0.12869322099596195,
+    "post_unlearn_asr_seeds": [
+        0.129,
+        0.43933333333333335,
+        0.33211111111111113
+    ],
+    "pre_unlearn_accuracy_std": 0.02040658934973919,
+    "pre_unlearn_accuracy_seeds": [
+        0.6006,
+        0.6077,
+        0.647
+    ],
+    "pre_unlearn_asr_std": 0.12541829052993547,
+    "pre_unlearn_asr_seeds": [
+        0.4708888888888889,
+        0.778,
+        0.6176666666666667
+    ]
 }
