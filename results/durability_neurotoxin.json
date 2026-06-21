@@ -22,7 +22,7 @@
     "malicious_client_id": "0",
     "unlearn_client_id": "0",
     "unlearn_client_ids": null,
-    "attack_stop_round": 25,
+    "attack_stop_round": 40,
     "resurgence_probe": false,
     "resurgence_steps": 100,
     "resurgence_lr": 0.01,
@@ -32,10 +32,10 @@
         2
     ],
     "local_epochs": 8,
-    "client_lr": 0.03,
+    "client_lr": 0.015,
     "lr_cosine": false,
     "num_clients": 50,
-    "num_rounds": 50,
+    "num_rounds": 70,
     "batch_size": 64,
     "partitions_path": "src/datasets/partitions.json",
     "cache_history": false,
@@ -43,33 +43,33 @@
     "use_cached_weights": false,
     "weights_cache_path": "durability_neurotoxin.npz",
     "output_path": "results/durability_neurotoxin.json",
-    "pre_unlearn_accuracy": 0.6184333333333333,
-    "pre_unlearn_asr": 0.6221851851851853,
-    "post_unlearn_accuracy": 0.6279666666666667,
-    "post_unlearn_asr": 0.30014814814814816,
-    "efficiency_unlearn_wall_s": 1.2559920530766249,
+    "pre_unlearn_accuracy": 0.6102,
+    "pre_unlearn_asr": 0.614,
+    "post_unlearn_accuracy": 0.6495,
+    "post_unlearn_asr": 0.27177777777777773,
+    "efficiency_unlearn_wall_s": 1.2671660838338237,
     "efficiency_unlearn_peak_mem_mb": 472.036864,
     "efficiency_storage_overhead_bytes": 0.0,
-    "durability_asr_at_stop": 0.217162962962963,
-    "durability_asr_final": 0.594288888888889,
-    "durability_retention": 3.852121941729718,
-    "durability_asr_at_stop_std": 0.09295579609381464,
+    "durability_asr_at_stop": 0.35322222222222227,
+    "durability_asr_final": 0.6847407407407408,
+    "durability_retention": 2.065294890582026,
+    "durability_asr_at_stop_std": 0.09636685050650569,
     "durability_asr_at_stop_seeds": [
-        0.2796666666666667,
-        0.2860666666666667,
-        0.08575555555555556
+        0.36864444444444444,
+        0.46277777777777784,
+        0.22824444444444442
     ],
-    "durability_asr_final_std": 0.038818721884218234,
+    "durability_asr_final_std": 0.05138835061446487,
     "durability_asr_final_seeds": [
-        0.553711111111111,
-        0.5825555555555556,
-        0.6466000000000001
+        0.6876,
+        0.7462,
+        0.6204222222222222
     ],
-    "durability_retention_std": 2.6078513764092643,
+    "durability_retention_std": 0.4730910214524563,
     "durability_retention_seeds": [
-        1.9798967024235197,
-        2.036432843936922,
-        7.540036278828713
+        1.865211887395262,
+        1.6124369747899157,
+        2.7182358095609
     ],
     "efficiency_storage_overhead_bytes_std": 0.0,
     "efficiency_storage_overhead_bytes_seeds": [
@@ -83,34 +83,34 @@
         472.036864,
         472.036864
     ],
-    "efficiency_unlearn_wall_s_std": 0.010772233496674468,
+    "efficiency_unlearn_wall_s_std": 0.003891257879979816,
     "efficiency_unlearn_wall_s_seeds": [
-        1.2706441630143672,
-        1.2450537581462413,
-        1.252278238069266
+        1.2689790637232363,
+        1.2707593338564038,
+        1.2617598539218307
     ],
-    "post_unlearn_accuracy_std": 0.007792446485040655,
+    "post_unlearn_accuracy_std": 0.01342162434282826,
     "post_unlearn_accuracy_seeds": [
-        0.6208,
-        0.6243,
-        0.6388
+        0.6454,
+        0.6355,
+        0.6676
     ],
-    "post_unlearn_asr_std": 0.12869322099596195,
+    "post_unlearn_asr_std": 0.13173695576565936,
     "post_unlearn_asr_seeds": [
-        0.129,
-        0.43933333333333335,
-        0.33211111111111113
+        0.087,
+        0.3847777777777778,
+        0.34355555555555556
     ],
-    "pre_unlearn_accuracy_std": 0.02040658934973919,
+    "pre_unlearn_accuracy_std": 0.03236119074859058,
     "pre_unlearn_accuracy_seeds": [
-        0.6006,
-        0.6077,
-        0.647
+        0.5925,
+        0.5825,
+        0.6556
     ],
-    "pre_unlearn_asr_std": 0.12541829052993547,
+    "pre_unlearn_asr_std": 0.13326408695679412,
     "pre_unlearn_asr_seeds": [
-        0.4708888888888889,
-        0.778,
-        0.6176666666666667
+        0.4348888888888889,
+        0.7543333333333333,
+        0.6527777777777778
     ]
 }

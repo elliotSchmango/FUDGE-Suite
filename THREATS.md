@@ -15,8 +15,14 @@ A handful of knobs are shared across attacks and set per row in `benchmark.py`:
 `poison_ratio` is the fraction of the attacker's images that get poisoned,
 `target_label` is the class a backdoor forces, `patch_size` is the side length of the
 pixel patch, and `amplification_factor` scales the malicious update before it is
-aggregated. The malicious client (client 0 by default) is forced into every training
-round by `FUDGEStrategy`, so the attack always gets a chance to land.
+aggregated. There is one attacker, client 0, out of the 50 clients. DBA is the only exception,
+with four colluding clients (0 through 3). `FUDGEStrategy` forces the attacker into
+every training round, even though ordinary sampling only draws 10 of the 50 clients
+per round. Without that, a single client picked at random one round in five could not
+plant a backdoor against 49 honest clients training over it every round. So the
+attacker is one client by identity but contributes on every round, up until it leaves
+in the durability probe. (For FedMUA the attacker still trains normally and plants
+nothing; its one client only sends the malicious deletion request afterward.)
 
 The roster splits in two. **Removal attacks** plant a backdoor during training, and
 unlearning is the defense that has to take it back out. **Exploitation attacks** turn
