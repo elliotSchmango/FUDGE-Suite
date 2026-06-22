@@ -12,6 +12,9 @@
 #create logs directory if missing
 mkdir -p logs
 
+#fail fast if the gpu is not acquired instead of silently running on cpu
+export FUDGE_REQUIRE_GPU=1
+
 #load HPC modules
 module purge
 module load python/3.11

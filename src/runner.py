@@ -23,6 +23,13 @@ from src.unlearning.rfs import run_rfs_baseline
 def _get_device():
     if torch.cuda.is_available():
         return torch.device("cuda")
+    #cluster jobs set FUDGE_REQUIRE_GPU so a missing gpu fails fast instead of
+    #silently running the whole federated job on cpu for hours
+    if os.environ.get("FUDGE_REQUIRE_GPU"):
+        raise RuntimeError(
+            "FUDGE_REQUIRE_GPU is set but torch.cuda.is_available() is False. "
+            "the gpu was not acquired (bad node or cuda/env issue); not falling back to cpu."
+        )
     if torch.backends.mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
@@ -318,6 +325,9 @@ def _run_seed(config, seed):
 
 #aggregate seeds into one report
 def run_experiment(config):
+    #resolve device up front so a missing-gpu run fails in seconds, not hours, and the
+    #chosen device is loud in the log
+    print(f"[device] running on {_get_device()}")
     reports = []
     for seed in config.seeds:
         if len(config.seeds) > 1:
