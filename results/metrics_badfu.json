@@ -1,0 +1,59 @@
+{
+    "threat_model": "badfu",
+    "threat_model_args": {
+        "camou_ratio": 0.2
+    },
+    "unlearner": "pga",
+    "unlearner_args": {
+        "epochs": 10,
+        "lr": 0.01,
+        "projection_radius": 2.0,
+        "retain_enabled": true
+    },
+    "scorers": [
+        "accuracy",
+        "asr"
+    ],
+    "target_label": 0,
+    "poison_ratio": 0.5,
+    "amplification_factor": 4.0,
+    "patch_size": 3,
+    "attack_enabled": true,
+    "malicious_client_id": "0",
+    "unlearn_client_id": "0",
+    "unlearn_client_ids": null,
+    "attack_stop_round": null,
+    "resurgence_probe": true,
+    "resurgence_steps": 100,
+    "resurgence_lr": 0.01,
+    "seeds": [
+        0
+    ],
+    "local_epochs": 8,
+    "client_lr": 0.03,
+    "lr_cosine": true,
+    "num_clients": 50,
+    "num_rounds": 50,
+    "batch_size": 64,
+    "partitions_path": "src/datasets/partitions.json",
+    "cache_history": false,
+    "run_rfs_baseline": true,
+    "use_cached_weights": false,
+    "weights_cache_path": "cache_badfu.npz",
+    "output_path": "results/metrics_badfu.json",
+    "pre_unlearn_accuracy": 0.638,
+    "pre_unlearn_asr": 0.7296666666666667,
+    "post_unlearn_accuracy": 0.5815,
+    "post_unlearn_asr": 0.5855555555555556,
+    "rfs_accuracy": 0.6466,
+    "rfs_asr": 0.043111111111111114,
+    "efficiency_unlearn_wall_s": 0.8163469550199807,
+    "efficiency_unlearn_peak_mem_mb": 470.85568,
+    "efficiency_storage_overhead_bytes": 0,
+    "efficiency_rfs_wall_s": 879.2492730221711,
+    "efficiency_rfs_peak_mem_mb": 154.871808,
+    "efficiency_rfs_comm_rounds": 50,
+    "efficiency_wall_speedup": 1077.0534116840686,
+    "post_resurge_accuracy": 0.6672,
+    "post_resurge_asr": 0.22933333333333333
+}
