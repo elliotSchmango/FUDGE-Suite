@@ -4,7 +4,7 @@ __pycache__/
 *.pyc
 src/**/*.pyc
 
-#data & run artifacts (keep metrics json as tracked evidence; weights caches stay out)
+#data & run artifacts
 data/
 logs/
 *.npz

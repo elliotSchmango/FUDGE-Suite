@@ -158,3 +158,57 @@ set against the malicious one, so the metric reflects malicious-versus-honest ra
 attack-versus-no-attack.
 
 Reference: FedMUA, arXiv:2501.11848.
+
+## Calibration
+
+Before any of an attack's removal numbers can mean anything, the attack itself has to be a
+valid test: a real, faithful threat that actually took hold. We check that against four
+targets, and every one of them is independent of the unlearner. We never tune an attack on
+how an unlearning algorithm performs against it (its post-unlearn ASR or its gap to the
+control), because that would calibrate the attack to one algorithm and rig the comparison.
+Each attack is calibrated on the targets below, frozen, and only then run against any
+unlearner, with the identical frozen config used for all of them.
+
+The four targets:
+
+1. **Implant strength.** Did the threat actually take hold during training? This is the gate.
+   An attack that did not land gives the unlearner nothing to remove, so any removal number
+   would be measuring noise.
+2. **Stability.** Is it a stable effect across rounds rather than a single lucky round? The
+   per-round score swings a lot, so a one-round reading is not enough.
+3. **Control.** Does the effect clear the baseline of a clean model that never saw the attack?
+   For the backdoor attacks this is the retrain-from-scratch control, which has no unlearner in
+   it. It tells us the effect is real and not the floor a clean model already sits at.
+4. **Faithfulness.** Does the implementation match the mechanism of the published attack, with
+   any adaptation (see the Notes above) deliberate and documented?
+
+The targets are fixed, but each attack reads them through its own mechanism:
+
+- **BadNets and DBA** take all four directly. The gate is the trigger ASR clearing the implant
+  floor (DBA uses the full four-corner trigger), stable across the late rounds, well above the
+  retrain control. Faithfulness for DBA means the trigger is genuinely split across the
+  colluders, not stamped whole on each.
+
+- **Neurotoxin** adds durability to target 2. Ordinary stability is not the point; the question
+  is whether the backdoor survives benign training after the attacker leaves. Faithfulness means
+  the low-movement-coordinate projection is actually active and the attack is not silently
+  collapsing into BadNets. (The durability measurement itself is an open problem, see the Note in
+  the Neurotoxin section.)
+
+- **Edge-Case** reads target 1 on the held-out tail rather than the whole class, and target 3
+  against the tail's own clean floor, which is not zero because the tail is made of hard
+  boundary samples. The implant has to clear that tail floor, not just any nonzero ASR.
+
+- **BadFU inverts target 1.** A high pre-unlearn ASR would mean the attack failed, because the
+  backdoor is supposed to stay dormant in service. The gate is the swing: dormant before the
+  unlearning request (low pre-unlearn ASR) and revived after it (high resurgence ASR). The
+  resurgence is measured with a generic benign fine-tune, not a specific unlearner, so the
+  calibration stays algorithm-independent. Stability means the dormancy is reliable and the
+  resurgence reproducible.
+
+- **FedMUA has no backdoor at all,** so target 1 is not an implant but an effect: does the
+  malicious deletion request actually raise targeted misclassification of the victim class?
+  Target 3 also changes. The right control is not retrain-from-scratch but an honest deletion
+  request (removing a random subset), so the number reflects malicious-versus-honest rather than
+  attack-versus-no-attack. Faithfulness covers the first-order influence proxy standing in for
+  the original inverse-Hessian selection.
