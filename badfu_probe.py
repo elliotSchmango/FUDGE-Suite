@@ -6,8 +6,10 @@ from dataclasses import replace
 from src.benchmark import attack_config
 from src.runner import run_experiment
 
-#(poison_ratio, camou_ratio): span camou/poison from 1x to 4x to bracket dormancy
-CONFIGS = [(0.5, 0.5), (0.3, 0.6), (0.2, 0.8)]
+#influence-crafted camouflage should suppress far more efficiently than random, so hold a
+#strong (revivable) backdoor at poison 0.5 and sweep camou up from the ratio that failed
+#with random selection (0.2). camou stays <= 1-poison so the disjoint sets fit.
+CONFIGS = [(0.5, 0.2), (0.5, 0.3), (0.5, 0.4)]
 
 
 def main():
