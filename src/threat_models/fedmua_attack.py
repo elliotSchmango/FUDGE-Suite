@@ -36,6 +36,17 @@ class FedMUAThreatModel(BaseThreatModel):
         idx = (labels == self.victim_class).nonzero(as_tuple=True)[0][:self.num_requests]
         return TensorDataset(images[idx], labels[idx])
 
+    #honest deletion request
+    def build_honest_forget_set(self, dataset: Dataset, model=None, device=None,
+                                client_id: str = None) -> Dataset:
+        images, labels = self._stack(dataset)
+        cand = (labels == self.victim_class).nonzero(as_tuple=True)[0]
+        if len(cand) == 0:
+            return None
+        k = min(self.num_requests, len(cand))
+        sel = cand[torch.randperm(len(cand))[:k]]
+        return TensorDataset(images[sel], labels[sel])
+
     #victim-class samples aligned with victim gradient
     def build_forget_set(self, dataset: Dataset, model=None, device=None,
                          client_id: str = None) -> Dataset:

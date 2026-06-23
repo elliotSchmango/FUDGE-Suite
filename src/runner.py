@@ -152,6 +152,26 @@ def _build_unlearn_loaders(config, base_dataset, threat_model, model, device):
     return forget_loader, retain_loader
 
 
+#honest deletion request over the same unlearn scope, none when the attack defines none
+def _build_honest_forget_loader(config, base_dataset, threat_model, model, device):
+    if threat_model is None:
+        return None
+    unlearn_ids = [str(c) for c in (config.unlearn_client_ids or [config.unlearn_client_id])]
+    parts = []
+    for uid in unlearn_ids:
+        raw = ProgrammaticBackdoorDataset(
+            client_id=uid,
+            partitions_path=config.partitions_path,
+            base_dataset=base_dataset,
+        )
+        honest = threat_model.build_honest_forget_set(raw, model=model, device=device, client_id=uid)
+        if honest is None:
+            return None
+        parts.append(honest)
+    honest_dataset = parts[0] if len(parts) == 1 else ConcatDataset(parts)
+    return DataLoader(honest_dataset, batch_size=config.batch_size, shuffle=True)
+
+
 #mean into raw key plus std and per-seed list
 def _aggregate_seeds(config, reports):
     out = dict(reports[0])
@@ -249,6 +269,10 @@ def _run_seed(config, seed):
     forget_loader, retain_loader = _build_unlearn_loaders(
         config, base_dataset, threat_model, model, device
     )
+    #honest deletion control (built before the malicious unlearn mutates the model)
+    honest_forget_loader = _build_honest_forget_loader(
+        config, base_dataset, threat_model, model, device
+    )
 
     #side data for unlearners
     context = UnlearnContext(
@@ -273,6 +297,23 @@ def _run_seed(config, seed):
     if rfs_metrics is not None:
         for k, v in rfs_metrics.items():
             report[f"rfs_{k}"] = v
+
+    #honest-vs-malicious control
+    if honest_forget_loader is not None:
+        print("\nrunning honest-deletion control (random forget request)")
+        honest_context = UnlearnContext(
+            global_weights=global_weights,
+            num_clients=config.num_clients,
+            unlearn_client_id=config.unlearn_client_id,
+            device=device,
+            history_cache=strategy.history_cache if strategy is not None else {},
+        )
+        honest_post = registry.build_unlearner(config).unlearn(
+            _load_model(global_weights, device), honest_forget_loader, retain_loader, honest_context
+        )
+        honest_metrics = benchmarker.run_audit(honest_post, label="honest-deletion")
+        for k, v in honest_metrics.items():
+            report[f"honest_{k}"] = v
 
     #efficiency, raw costs for both phases
     report["efficiency_unlearn_wall_s"] = unlearn_cost.wall_s

@@ -22,6 +22,11 @@ class BaseThreatModel(ABC):
                          client_id: str = None) -> Dataset:
         return self.get_forget_set(dataset, client_id)
 
+    #honest deletion control
+    def build_honest_forget_set(self, dataset: Dataset, model=None, device=None,
+                                client_id: str = None) -> Dataset:
+        return None
+
     #optional hooks, defaults suit single-client
 
     #full-train reference for global-subpopulation attacks
