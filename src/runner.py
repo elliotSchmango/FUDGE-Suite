@@ -217,9 +217,8 @@ def _run_seed(config, seed):
     threat_model = registry.build_threat_model(config) if config.attack_enabled else None
     holdout = []
     if threat_model is not None:
-        #full train set for global-subpopulation attacks
         threat_model.set_reference_data(base_dataset)
-        #edge tail held out of honest data, also from rfs control
+        threat_model.set_target_data(test_dataset)
         holdout = threat_model.holdout_indices()
 
     #standardized eval suite

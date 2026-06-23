@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 
 from src.registry import register_scorer
 
-
 #base scorer interface
 class BaseScorer(ABC):
     @property
@@ -14,7 +13,6 @@ class BaseScorer(ABC):
     @abstractmethod
     def evaluate(self, model, dataloader, device) -> float: #run eval
         ...
-
 
 #clean accuracy
 class CleanAccuracyScorer(BaseScorer):
@@ -125,7 +123,6 @@ class EdgeCaseASRScorer(BaseScorer):
             preds = torch.max(model(self._tail_imgs.to(device)), 1)[1]
         return (preds == self.target_label).float().mean().item()
 
-
 @register_scorer("edgecase_asr")
 def build_edgecase_asr(config, threat_model=None):
     from src.datasets.reference_model import load_reference_model
@@ -136,33 +133,25 @@ def build_edgecase_asr(config, threat_model=None):
         reference_model=load_reference_model(),
     )
 
-
-#fedmua success
+#keeping track of misclassified instances for fedmua
 class MisclassificationScorer(BaseScorer):
-    def __init__(self, victim_class: int):
-        self.victim_class = victim_class
+    def __init__(self, threat_model):
+        self.threat_model = threat_model
 
     @property
     def name(self) -> str:
         return "misclassification"
 
     def evaluate(self, model, dataloader, device) -> float:
-        model.eval()
-        miss, total = 0, 0
-        with torch.no_grad():
-            for images, labels in dataloader:
-                mask = labels == self.victim_class
-                if mask.sum() == 0:
-                    continue
-                preds = torch.max(model(images[mask].to(device)), 1)[1].cpu()
-                total += int(mask.sum().item())
-                miss += (preds != self.victim_class).sum().item()
-
-        if not total:
+        targets = self.threat_model.target_samples()
+        if not targets or len(targets[0]) == 0:
             return 0.0
-        return miss / total
-
+        imgs, lbls = targets
+        model.eval()
+        with torch.no_grad():
+            preds = torch.max(model(imgs.to(device)), 1)[1].cpu()
+        return (preds != lbls).float().mean().item()
 
 @register_scorer("misclassification")
 def build_misclassification(config, threat_model=None):
-    return MisclassificationScorer(victim_class=threat_model.victim_class)
+    return MisclassificationScorer(threat_model)

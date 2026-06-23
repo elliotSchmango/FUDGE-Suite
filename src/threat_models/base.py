@@ -33,6 +33,14 @@ class BaseThreatModel(ABC):
     def set_reference_data(self, dataset):
         pass
 
+    #fixed target test samples for sample-level attacks
+    def set_target_data(self, dataset):
+        pass
+
+    #selected target samples (images, labels), none unless a target attack
+    def target_samples(self):
+        return None
+
     #global indices held out of honest clients, default none
     def holdout_indices(self):
         return []
