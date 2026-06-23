@@ -9,7 +9,7 @@ from src.registry import register_threat_model
 @register_threat_model("fedmua")
 class FedMUAThreatModel(BaseThreatModel):
     def __init__(self, target_label: int, poison_ratio: float, victim_class: int = 0,
-                 num_requests: int = 20, max_candidates: int = 200, num_targets: int = 50):
+                 num_requests: int = 20, max_candidates: int = 200, num_targets: int = 40):
         super().__init__(target_label, poison_ratio)
         self.victim_class = victim_class
         self.num_requests = num_requests
@@ -49,11 +49,10 @@ class FedMUAThreatModel(BaseThreatModel):
     def build_honest_forget_set(self, dataset: Dataset, model=None, device=None,
                                 client_id: str = None) -> Dataset:
         images, labels = self._stack(dataset)
-        cand = (labels == self.victim_class).nonzero(as_tuple=True)[0]
-        if len(cand) == 0:
+        if len(images) == 0:
             return None
-        k = min(self.num_requests, len(cand))
-        sel = cand[torch.randperm(len(cand))[:k]]
+        k = min(self.num_requests, len(images))
+        sel = torch.randperm(len(images))[:k]
         return TensorDataset(images[sel], labels[sel])
 
     #unlearning them flips the targets
@@ -63,7 +62,8 @@ class FedMUAThreatModel(BaseThreatModel):
             return self.get_forget_set(dataset, client_id)
 
         images, labels = self._stack(dataset)
-        cand = (labels == self.victim_class).nonzero(as_tuple=True)[0][:self.max_candidates]
+        #candidates span the whole client, influential samples need not be target class
+        cand = torch.arange(len(images))[:self.max_candidates]
         if len(cand) == 0:
             return self.get_forget_set(dataset, client_id)
 
