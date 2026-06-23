@@ -15,6 +15,9 @@ mkdir -p logs
 #fail fast if the gpu is not acquired instead of silently running on cpu
 export FUDGE_REQUIRE_GPU=1
 
+#unbuffered stdout so the device line and round progress survive a crash in the log
+export PYTHONUNBUFFERED=1
+
 #load HPC modules
 module purge
 module load python/3.11

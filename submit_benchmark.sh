@@ -16,6 +16,9 @@ mkdir -p logs
 #fail fast if the gpu is not acquired instead of silently running on cpu
 export FUDGE_REQUIRE_GPU=1
 
+#unbuffered stdout so the device line and round progress survive a crash in the log
+export PYTHONUNBUFFERED=1
+
 #load UVA HPC modules
 module purge
 module load python/3.11
@@ -27,7 +30,8 @@ if ! command -v uv &> /dev/null; then
     export PATH="$HOME/.local/bin:$PATH"
 fi
 
-#build env only if missing; pre-stage on the login node so parallel tasks never race
+#build env only if missing
+#pre-stage on the login node so parallel tasks don't collide
 if [ ! -d .venv ]; then
     echo "syncing project environment"
     uv venv .venv
