@@ -117,8 +117,7 @@ class FUDGEClient(fl.client.NumPyClient):
             lr=round_lr,
             momentum=self.momentum,
             weight_decay=1e-4,
-            #single-tensor path: the fused foreach kernel hit cudaErrorIllegalAddress
-            #on the new driver. same math, just avoids the crashing kernel.
+            #single-tensor sgd: foreach kernel crashed on new driver
             foreach=False,
         )
 

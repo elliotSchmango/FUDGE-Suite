@@ -25,7 +25,7 @@ class FUDGEStrategy(fl.server.strategy.FedAvg):
 
         all_clients = client_manager.all()
 
-        #cooldown: once the attacker has left, swap any sampled saboteur for a benign client
+        #cooldown: swap sampled saboteur for benign client once attacker left
         if self.attack_stop_round is not None and server_round > self.attack_stop_round:
             used = {client.cid for client, _ in pairs}
             spare = [cid for cid in all_clients

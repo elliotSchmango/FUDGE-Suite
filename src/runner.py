@@ -23,8 +23,7 @@ from src.unlearning.rfs import run_rfs_baseline
 def _get_device():
     if torch.cuda.is_available():
         return torch.device("cuda")
-    #cluster jobs set FUDGE_REQUIRE_GPU so a missing gpu fails fast instead of
-    #silently running the whole federated job on cpu for hours
+    #FUDGE_REQUIRE_GPU set: fail fast, no silent cpu fallback
     if os.environ.get("FUDGE_REQUIRE_GPU"):
         raise RuntimeError(
             "FUDGE_REQUIRE_GPU is set but torch.cuda.is_available() is False. "
@@ -152,7 +151,7 @@ def _build_unlearn_loaders(config, base_dataset, threat_model, model, device):
     return forget_loader, retain_loader
 
 
-#honest deletion request over the same unlearn scope, none when the attack defines none
+#honest deletion request over same unlearn scope, none if undefined
 def _build_honest_forget_loader(config, base_dataset, threat_model, model, device):
     if threat_model is None:
         return None
@@ -269,7 +268,7 @@ def _run_seed(config, seed):
     forget_loader, retain_loader = _build_unlearn_loaders(
         config, base_dataset, threat_model, model, device
     )
-    #honest deletion control (built before the malicious unlearn mutates the model)
+    #honest control, built before malicious unlearn mutates model
     honest_forget_loader = _build_honest_forget_loader(
         config, base_dataset, threat_model, model, device
     )
@@ -348,12 +347,12 @@ def _run_seed(config, seed):
     if config.attack_stop_round is not None and strategy is not None:
         traj = strategy.asr_trajectory
 
-        #per-round asr swings hard, so average a 5-round window instead of one round
+        #per-round asr swings hard, average 5-round window
         def _window_mean(lo, hi):
             vals = [traj[r] for r in range(lo, hi + 1) if traj.get(r) is not None]
             return sum(vals) / len(vals) if vals else None
 
-        #last 5 attacked rounds (the plateau) vs last 5 cooldown rounds (the survivor)
+        #last 5 attacked rounds vs last 5 cooldown rounds
         asr_stop = _window_mean(config.attack_stop_round - 4, config.attack_stop_round)
         asr_final = _window_mean(config.num_rounds - 4, config.num_rounds)
         report["durability_asr_at_stop"] = asr_stop
@@ -366,8 +365,7 @@ def _run_seed(config, seed):
 
 #aggregate seeds into one report
 def run_experiment(config):
-    #resolve device up front so a missing-gpu run fails in seconds, not hours, and the
-    #chosen device is loud in the log
+    #resolve device up front: fail fast and log it
     print(f"[device] running on {_get_device()}")
     reports = []
     for seed in config.seeds:

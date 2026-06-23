@@ -27,7 +27,7 @@ class BadFUThreatModel(BaseThreatModel):
         #cap candidates scored for influence
         self.max_candidates = max_candidates
         self._ref_model = None
-        #cache the crafted camouflage so train and forget see the identical set
+        #cache camouflage so train and forget see identical set
         self._camou = None
 
     #lazy-load shared clean reference model
@@ -61,10 +61,8 @@ class BadFUThreatModel(BaseThreatModel):
         bd_labels = torch.full((num_bd,), self.target_label, dtype=labels.dtype)
         return TensorDataset(bd_images, bd_labels)
 
-    #influence-craft the camouflage. these are triggered, TRUE-labeled samples whose
-    #gradient most opposes the backdoor direction, so they cancel the backdoor in service
-    #(dormant) and releasing them by unlearning unmasks it (resurgence). first-order proxy
-    #on the clean reference model, last classifier layer to keep per-sample grads cheap.
+    #influence-craft camouflage: triggered true-label samples anti-aligned to backdoor
+    #suppress it in service, unlearning then unmasks it. first-order proxy, reference last layer
     def _camou_indices(self, images, labels, num_bd, num_cf):
         device = _device()
         model = self._ref().to(device).eval()
@@ -77,24 +75,24 @@ class BadFUThreatModel(BaseThreatModel):
             grads = torch.autograd.grad(loss, params)
             return torch.cat([g.flatten() for g in grads]).detach()
 
-        #backdoor direction from a sample of the trigger->target block
+        #backdoor direction from trigger->target sample
         s = min(num_bd, 128)
         bd_dir = flat_grad(self.apply_trigger(images[:s]),
                            torch.full((s,), self.target_label, dtype=torch.long))
 
-        #candidates are the non-backdoor images, triggered but kept at their true label
+        #candidates: non-backdoor images, triggered but true-labeled
         cand = torch.arange(num_bd, len(images))[:self.max_candidates]
         cand_trig = self.apply_trigger(images[cand])
         scores = torch.empty(len(cand))
         for j in range(len(cand)):
             g = flat_grad(cand_trig[j:j + 1], labels[cand[j:j + 1]])
             scores[j] = torch.dot(g, bd_dir)
-        #most anti-aligned (most negative) cancel the backdoor hardest
+        #most anti-aligned cancel backdoor hardest
         k = min(num_cf, len(cand))
         sel = torch.topk(scores, k, largest=False).indices
         return cand[sel]
 
-    #camouflage subset, influence-selected, triggered, true label. cached for reuse.
+    #camouflage subset, influence-selected, cached for reuse
     def generate_camouflage(self, dataset: Dataset, client_id: str = None,
                             live_model: nn.Module = None) -> Dataset:
         if self._camou is not None:
