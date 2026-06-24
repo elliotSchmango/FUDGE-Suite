@@ -34,7 +34,7 @@ class BaseThreatModel(ABC):
         pass
 
     #fixed target test samples for sample-level attacks
-    def set_target_data(self, dataset):
+    def set_target_data(self, dataset, model=None, device=None):
         pass
 
     #selected target samples (images, labels), none unless a target attack

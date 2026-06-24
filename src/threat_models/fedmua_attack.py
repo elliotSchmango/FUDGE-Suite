@@ -30,10 +30,19 @@ class FedMUAThreatModel(BaseThreatModel):
     def build_malicious_trainset(self, dataset: Dataset, client_id: str = None) -> Dataset:
         return dataset
 
-    #fix the target test samples the attack flips
-    def set_target_data(self, dataset: Dataset):
+    #fix target test samples the attack flips, only ones the trained model gets right
+    def set_target_data(self, dataset: Dataset, model=None, device=None):
         images, labels = self._stack(dataset)
-        idx = (labels == self.victim_class).nonzero(as_tuple=True)[0][:self.num_targets]
+        idx = (labels == self.victim_class).nonzero(as_tuple=True)[0]
+        if model is not None and len(idx) > 0:
+            device = device or torch.device("cpu")
+            model = model.to(device).eval()
+            with torch.no_grad():
+                preds = torch.max(model(images[idx].to(device)), 1)[1].cpu()
+            correct = idx[preds == self.victim_class]
+            if len(correct) > 0:
+                idx = correct
+        idx = idx[:self.num_targets]
         self._targets = (images[idx].clone(), labels[idx].clone())
 
     def target_samples(self):

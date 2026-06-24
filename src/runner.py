@@ -218,7 +218,6 @@ def _run_seed(config, seed):
     holdout = []
     if threat_model is not None:
         threat_model.set_reference_data(base_dataset)
-        threat_model.set_target_data(test_dataset)
         holdout = threat_model.holdout_indices()
 
     #standardized eval suite
@@ -249,6 +248,10 @@ def _run_seed(config, seed):
         )
         np.savez(seed_cache_path, *global_weights)
         print(f"cached global weights to {seed_cache_path}")
+
+    #fix target samples now that the model is trained, only ones it classifies right
+    if threat_model is not None:
+        threat_model.set_target_data(test_dataset, _load_model(global_weights, device), device)
 
     #rfs control, attack disabled
     rfs_metrics = None
