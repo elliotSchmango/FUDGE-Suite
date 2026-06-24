@@ -59,6 +59,8 @@ class ExperimentConfig:
     local_epochs: int = 8
     client_lr: float = 0.03
     lr_cosine: bool = True
+    #re-warmed constant lr for the cooldown phase (durability probe only)
+    cooldown_lr: float = 0.01
 
     #fixed-element overrides
     num_clients: int = NUM_CLIENTS

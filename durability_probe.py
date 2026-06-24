@@ -4,13 +4,12 @@ from dataclasses import replace
 from src.benchmark import attack_config
 from src.runner import run_experiment
 
-#attacker forced through this round, then benign rounds let the backdoor decay.
-#stop at a mature implant (40), then a long cooldown (to 70) at a gentle steady lr:
-#low enough that the model settles into a readable plateau, high enough that the
-#cooldown rounds actually train and can erode a non-durable backdoor.
+#two-phase: cosine-converge by STOP_ROUND (mature model + implant), then re-warm to a
+#constant cooldown lr for rounds STOP_ROUND..PROBE_ROUNDS so the cooldown erodes a matured
+#model. removes the maturation confound: neurotoxin should hold where badnets decays.
 STOP_ROUND = 40
 PROBE_ROUNDS = 70
-PROBE_LR = 0.015
+COOLDOWN_LR = 0.01
 ATTACKS = ["badnets", "neurotoxin"]
 
 
@@ -22,8 +21,8 @@ def main():
             attack_config(name),
             attack_stop_round=STOP_ROUND,
             num_rounds=PROBE_ROUNDS,
-            client_lr=PROBE_LR,
-            lr_cosine=False,
+            lr_cosine=True,
+            cooldown_lr=COOLDOWN_LR,
             run_rfs_baseline=False,
             seeds=[0, 1, 2],
             output_path=f"results/durability_{name}.json",

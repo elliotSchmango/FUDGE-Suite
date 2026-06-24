@@ -9,12 +9,14 @@ from src.registry import register_threat_model
 @register_threat_model("fedmua")
 class FedMUAThreatModel(BaseThreatModel):
     def __init__(self, target_label: int, poison_ratio: float, victim_class: int = 0,
-                 num_requests: int = 20, max_candidates: int = 200, num_targets: int = 40):
+                 num_requests: int = 20, max_candidates: int = 200, num_targets: int = 40,
+                 mug_strength: float = 0.5):
         super().__init__(target_label, poison_ratio)
         self.victim_class = victim_class
         self.num_requests = num_requests
         self.max_candidates = max_candidates
-        self.num_targets = num_targets  #target test samples the attack tries to flip
+        self.num_targets = num_targets  
+        self.mug_strength = mug_strength
         self._targets = None
 
     #stack dataset into tensors
@@ -99,4 +101,10 @@ class FedMUAThreatModel(BaseThreatModel):
         ])
         k = min(self.num_requests, len(cand))
         top = cand[torch.topk(scores, k).indices]
-        return TensorDataset(images[top], labels[top])
+        sel_imgs, sel_lbls = images[top].clone(), labels[top].clone()
+
+        #mug: nudge influential samples toward target centroid so the request hits targets
+        if self.mug_strength > 0:
+            target_mean = tg_imgs.mean(dim=0, keepdim=True)
+            sel_imgs = sel_imgs - self.mug_strength * (sel_imgs - target_mean)
+        return TensorDataset(sel_imgs, sel_lbls)

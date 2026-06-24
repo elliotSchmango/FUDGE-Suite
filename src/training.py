@@ -36,10 +36,15 @@ def federated_train(config, base_dataset, threat_model, benchmarker,
         strategy.asr_trajectory[server_round] = metrics.get("asr")
         return 0.0, metrics
 
-    #cosine lr decay across rounds
+    #cosine lr decay, two-phase when a cooldown is set: converge by attack_stop_round,
+    #then re-warm to a constant lr so the cooldown erodes a matured model, not a maturing one
+    stop = config.attack_stop_round
     def fit_config_fn(server_round):
-        if config.lr_cosine and config.num_rounds > 1:
-            progress = (server_round - 1) / (config.num_rounds - 1)
+        if stop is not None and server_round > stop:
+            lr = config.cooldown_lr
+        elif config.lr_cosine:
+            horizon = stop if stop is not None else config.num_rounds
+            progress = min((server_round - 1) / max(horizon - 1, 1), 1.0)
             lr = config.client_lr * 0.5 * (1.0 + math.cos(math.pi * progress))
         else:
             lr = config.client_lr
