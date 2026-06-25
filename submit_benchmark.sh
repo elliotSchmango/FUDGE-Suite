@@ -60,5 +60,7 @@ fi
 ATTACKS=(badnets dba_partial dba_detected neurotoxin edgecase badfu fedmua)
 ATTACK=${ATTACKS[$SLURM_ARRAY_TASK_ID]}
 
-echo "running attack $ATTACK"
-uv run python -m src.main --mode attack --attack "$ATTACK"
+#unlearner defaults to pga, override with UNLEARNER=federaser for the 2nd unlearner sweep
+UNLEARNER=${UNLEARNER:-pga}
+echo "running attack $ATTACK with unlearner $UNLEARNER"
+uv run python -m src.main --mode attack --attack "$ATTACK" --unlearner "$UNLEARNER"

@@ -75,10 +75,12 @@ def attack_config(attack_name, base_config=None, roster=None):
         raise ValueError(f"unknown attack {attack_name}")
     #remaining keys map to config fields
     overrides = {k: v for k, v in spec.items() if k != "name"}
+    #suffix non-pga unlearners so they get their own files, never clobber pga results
+    suffix = "" if base_config.unlearner == "pga" else f"_{base_config.unlearner}"
     return replace(
         base_config,
-        output_path=f"results/metrics_{attack_name}.json",
-        weights_cache_path=f"cache_{attack_name}.npz",
+        output_path=f"results/metrics_{attack_name}{suffix}.json",
+        weights_cache_path=f"cache_{attack_name}{suffix}.npz",
         **overrides,
     )
 

@@ -15,8 +15,14 @@ class FUDGEStrategy(fl.server.strategy.FedAvg):
         self.attack_stop_round = attack_stop_round
         #per-round asr filled by the evaluate hook
         self.asr_trajectory = {}
+        #round-start global stashed for fedraser-style calibrated replay
+        self._round_start = None
 
     def configure_fit(self, server_round, parameters, client_manager):
+        #stash incoming global so the cache can record each round's start
+        if self.cache_history:
+            self._round_start = parameters_to_ndarrays(parameters)
+
         #fedavg sampling
         pairs = super().configure_fit(server_round, parameters, client_manager)
 
@@ -60,18 +66,29 @@ class FUDGEStrategy(fl.server.strategy.FedAvg):
             #set weights equal to aggregated params
             self.global_weights = parameters_to_ndarrays(aggregated_parameters)
 
-            #cache per-round updates only when an unlearner needs them
-            if self.cache_history:
-                client_updates = [
-                    parameters_to_ndarrays(fit_res.parameters)
-                    for _, fit_res in results
-                ]
+            #cache start global plus the retained-client aggregate, saboteurs excluded, so a
+            #calibrated-replay unlearner rebuilds the trajectory without the target client.
+            #stores 2 snapshots/round, not every client model, to bound memory
+            if self.cache_history and self._round_start is not None:
+                retain_total = sum(
+                    fr.num_examples for cp, fr in results
+                    if cp.cid not in self.malicious_client_ids
+                )
+                retain_agg = None
+                if retain_total > 0:
+                    for cp, fr in results:
+                        if cp.cid in self.malicious_client_ids:
+                            continue
+                        w = parameters_to_ndarrays(fr.parameters)
+                        frac = fr.num_examples / retain_total
+                        if retain_agg is None:
+                            retain_agg = [x * frac for x in w]
+                        else:
+                            for i in range(len(retain_agg)):
+                                retain_agg[i] += w[i] * frac
                 self.history_cache[server_round] = {
-                    "global_weights": [np.copy(w) for w in self.global_weights],
-                    "client_updates": [
-                        [np.copy(w) for w in update]
-                        for update in client_updates
-                    ],
+                    "start_weights": [np.copy(w) for w in self._round_start],
+                    "retain_agg": [np.copy(w) for w in retain_agg] if retain_agg is not None else None,
                 }
 
         return aggregated_parameters, metrics
