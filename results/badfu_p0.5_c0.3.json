@@ -1,7 +1,7 @@
 {
     "threat_model": "badfu",
     "threat_model_args": {
-        "camou_ratio": 0.2
+        "camou_ratio": 0.3
     },
     "unlearner": "pga",
     "unlearner_args": {
@@ -38,23 +38,17 @@
     "batch_size": 64,
     "partitions_path": "src/datasets/partitions.json",
     "cache_history": false,
-    "run_rfs_baseline": true,
+    "run_rfs_baseline": false,
     "use_cached_weights": false,
-    "weights_cache_path": "cache_badfu.npz",
-    "output_path": "results/metrics_badfu.json",
-    "pre_unlearn_accuracy": 0.6388,
-    "pre_unlearn_asr": 0.7024444444444444,
-    "post_unlearn_accuracy": 0.605,
-    "post_unlearn_asr": 0.5407777777777778,
-    "rfs_accuracy": 0.64,
-    "rfs_asr": 0.03277777777777778,
-    "efficiency_unlearn_wall_s": 0.6872268790029921,
-    "efficiency_unlearn_peak_mem_mb": 470.332928,
+    "weights_cache_path": "badfu_p0.5_c0.3.npz",
+    "output_path": "results/badfu_p0.5_c0.3.json",
+    "pre_unlearn_accuracy": 0.6446,
+    "pre_unlearn_asr": 0.7113333333333334,
+    "post_unlearn_accuracy": 0.6034,
+    "post_unlearn_asr": 0.5622222222222222,
+    "efficiency_unlearn_wall_s": 0.9544631089956965,
+    "efficiency_unlearn_peak_mem_mb": 475.182592,
     "efficiency_storage_overhead_bytes": 0,
-    "efficiency_rfs_wall_s": 873.1510019550042,
-    "efficiency_rfs_peak_mem_mb": 154.871808,
-    "efficiency_rfs_comm_rounds": 50,
-    "efficiency_wall_speedup": 1270.5425655378108,
-    "post_resurge_accuracy": 0.6754,
-    "post_resurge_asr": 0.11144444444444444
+    "post_resurge_accuracy": 0.6596,
+    "post_resurge_asr": 0.144
 }

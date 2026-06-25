@@ -54,5 +54,5 @@ else
     echo "reusing existing reference_model.pt"
 fi
 
-echo "running badfu camouflage-balance probe"
-uv run python badfu_probe.py
+echo "running neurotoxin two-phase durability probe"
+uv run python durability_probe.py
