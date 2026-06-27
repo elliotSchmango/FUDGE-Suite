@@ -1,0 +1,64 @@
+{
+    "threat_model": "dba",
+    "threat_model_args": {
+        "num_saboteurs": 4
+    },
+    "unlearner": "federaser",
+    "unlearner_args": {
+        "calib_steps": 10,
+        "calib_lr": 0.01,
+        "calib_interval": 1
+    },
+    "scorers": [
+        "accuracy",
+        "asr"
+    ],
+    "target_label": 0,
+    "poison_ratio": 0.5,
+    "amplification_factor": 4.0,
+    "patch_size": 3,
+    "attack_enabled": true,
+    "malicious_client_id": "0",
+    "unlearn_client_id": "0",
+    "unlearn_client_ids": [
+        "0",
+        "1",
+        "2",
+        "3"
+    ],
+    "attack_stop_round": null,
+    "resurgence_probe": false,
+    "resurgence_steps": 100,
+    "resurgence_lr": 0.01,
+    "seeds": [
+        0
+    ],
+    "local_epochs": 8,
+    "client_lr": 0.03,
+    "lr_cosine": true,
+    "cooldown_lr": 0.01,
+    "num_clients": 50,
+    "num_rounds": 50,
+    "batch_size": 64,
+    "partitions_path": "src/datasets/partitions.json",
+    "cache_history": true,
+    "run_rfs_baseline": true,
+    "use_cached_weights": false,
+    "weights_cache_path": "cache_dba_detected_federaser.npz",
+    "output_path": "results/metrics_dba_detected_federaser.json",
+    "pre_unlearn_accuracy": 0.6271,
+    "pre_unlearn_asr": 0.9987777777777778,
+    "post_unlearn_accuracy": 0.2963,
+    "post_unlearn_asr": 0.03077777777777778,
+    "rfs_accuracy": 0.6467,
+    "rfs_asr": 0.030111111111111113,
+    "efficiency_unlearn_wall_s": 11.836585171055049,
+    "efficiency_unlearn_peak_mem_mb": 473.029632,
+    "efficiency_storage_overhead_bytes": 4473440800,
+    "efficiency_unlearn_comm_rounds": 50,
+    "efficiency_rfs_wall_s": 889.9413127391599,
+    "efficiency_rfs_peak_mem_mb": 154.871808,
+    "efficiency_rfs_comm_rounds": 50,
+    "efficiency_wall_speedup": 75.1856468633711,
+    "efficiency_comm_round_fraction": 1.0
+}

@@ -1,4 +1,5 @@
 import argparse
+import os
 from dataclasses import replace
 
 from src.config import ExperimentConfig, test_config
@@ -12,7 +13,10 @@ def _base_config(unlearner):
         return None
     overrides = {"unlearner": unlearner}
     if unlearner == "federaser":
-        overrides["unlearner_args"] = {"calib_steps": 10, "calib_lr": 0.01, "calib_interval": 1}
+        #calib_steps sets direction fidelity per replayed round, env-overridable to spend
+        #the speedup headroom on utility recovery toward rfs
+        calib_steps = int(os.environ.get("FEDERASER_CALIB_STEPS", 100))
+        overrides["unlearner_args"] = {"calib_steps": calib_steps, "calib_lr": 0.01, "calib_interval": 1}
         overrides["cache_history"] = True
     return replace(ExperimentConfig(), **overrides)
 
