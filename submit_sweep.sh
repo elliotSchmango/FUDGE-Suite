@@ -46,5 +46,7 @@ else
     echo "reusing existing partitions.json"
 fi
 
-echo "running neurotoxin two-phase durability probe"
-uv run python durability_probe.py
+#probe script defaults to durability, override with PROBE=badfu_ablation.py for other sweeps
+PROBE=${PROBE:-durability_probe.py}
+echo "running probe $PROBE"
+uv run python "$PROBE"
