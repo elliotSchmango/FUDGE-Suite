@@ -146,7 +146,9 @@ def _build_unlearn_loaders(config, base_dataset, threat_model, model, device):
         )
     retain_dataset = ConcatDataset(retain_partitions)
 
-    forget_loader = DataLoader(forget_dataset, batch_size=config.batch_size, shuffle=True)
+    #empty forget set, no shuffle so dataloader does not choke on zero samples
+    forget_loader = DataLoader(forget_dataset, batch_size=config.batch_size,
+                               shuffle=len(forget_dataset) > 0)
     retain_loader = DataLoader(retain_dataset, batch_size=config.batch_size, shuffle=True)
     return forget_loader, retain_loader
 
