@@ -56,7 +56,6 @@ def import_builtins():
     from src.threat_models import badnets_attack
     from src.threat_models import neurotoxin_attack
     from src.threat_models import dba_attack
-    from src.threat_models import edgecase_attack
     from src.threat_models import fedmua_attack
     from src.unlearning import pga
     from src.unlearning import federaser

@@ -48,16 +48,8 @@ else
     echo "reusing existing partitions.json"
 fi
 
-#train clean reference model only if missing
-if [ ! -f src/datasets/reference_model.pt ]; then
-    echo "training clean reference model"
-    uv run python -m src.datasets.reference_model
-else
-    echo "reusing existing reference_model.pt"
-fi
-
 #map array index to roster row, dba split into partial and detected
-ATTACKS=(badnets dba_partial dba_detected neurotoxin edgecase badfu fedmua)
+ATTACKS=(badnets dba_partial dba_detected neurotoxin badfu fedmua)
 ATTACK=${ATTACKS[$SLURM_ARRAY_TASK_ID]}
 
 #unlearner defaults to pga, override with UNLEARNER=federaser for the 2nd unlearner sweep

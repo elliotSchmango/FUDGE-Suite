@@ -46,13 +46,5 @@ else
     echo "reusing existing partitions.json"
 fi
 
-#train clean reference model only if missing
-if [ ! -f src/datasets/reference_model.pt ]; then
-    echo "training clean reference model"
-    uv run python -m src.datasets.reference_model
-else
-    echo "reusing existing reference_model.pt"
-fi
-
 echo "running neurotoxin two-phase durability probe"
 uv run python durability_probe.py

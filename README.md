@@ -40,7 +40,7 @@ uv run python -m src.main --mode aggregate                #combine metrics_*.jso
 
 ## Roster
 
-`badnets`, `dba_partial`, `dba_detected`, `neurotoxin`, `edgecase` (removal), plus `badfu`, `fedmua` (exploitation). See [ARCHITECTURE.md](ARCHITECTURE.md).
+`badnets`, `dba_partial`, `dba_detected`, `neurotoxin` (removal), plus `badfu`, `fedmua` (exploitation). See [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Configurable options
 
@@ -52,7 +52,7 @@ All settings live in `ExperimentConfig` (`src/config.py`); roster rows override 
 | `unlearner` | `pga` | FU algorithm under test |
 | `unlearner_args` | `{epochs, lr, projection_radius, retain_enabled}` | algorithm settings |
 | `threat_model` / `threat_model_args` | per row | attack and its settings |
-| `scorers` | `[accuracy, asr]` | `asr`, `edgecase_asr`, or `misclassification` |
+| `scorers` | `[accuracy, asr]` | `asr` or `misclassification` |
 
 **Attack strength**
 | Option | Default | |

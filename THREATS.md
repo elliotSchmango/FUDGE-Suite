@@ -90,29 +90,6 @@ until then it shares the `asr` scorer with the other removal attacks.
 Reference: Zhang et al., *Neurotoxin: Durable Backdoors in Federated Learning*, ICML 2022
 (arXiv:2206.10341).
 
-### Edge-Case
-
-Edge-Case backdoors a rare slice of a class rather than a synthetic patch. Because the
-poisoned inputs are ones the model almost never sees, the attack barely moves clean
-accuracy and is hard to notice or scrub.
-
-**Note:** This is the most heavily adapted row. The original attack uses out-of-distribution
-images, such as Southwest airplanes hidden inside the airplane class, and the fixed CIFAR-10
-setup does not allow outside images. FUDGE builds the rare slice inside CIFAR-10 instead. The
-tail is the `tail_fraction` of source-class images that a clean reference model
-(`reference_model.pt`) is least confident about, that is, the genuinely atypical members near
-the decision boundary. The same reference model selects the test-set tail, so the trained and
-scored tails are the same population. Those exact images are held out of every honest client
-and the control run and handed only to the attacker, relabeled to the target. The holdout
-stands in for the out-of-distribution exclusivity of the original, where honest clients never
-touch the edge data.
-
-It is scored with `edgecase_asr`, which reports the fraction of the held-out test tail the
-model sends to the target class.
-
-Reference: Wang et al., *Attack of the Tails: Yes, You Really Can Backdoor Federated
-Learning*, NeurIPS 2020 (arXiv:2007.05084).
-
 ## Exploitation attacks
 
 ### BadFU
@@ -194,10 +171,6 @@ The targets are fixed, but each attack reads them through its own mechanism:
   the low-movement-coordinate projection is actually active and the attack is not silently
   collapsing into BadNets. (The durability measurement itself is an open problem, see the Note in
   the Neurotoxin section.)
-
-- **Edge-Case** reads target 1 on the held-out tail rather than the whole class, and target 3
-  against the tail's own clean floor, which is not zero because the tail is made of hard
-  boundary samples. The implant has to clear that tail floor, not just any nonzero ASR.
 
 - **BadFU inverts target 1.** A high pre-unlearn ASR would mean the attack failed, because the
   backdoor is supposed to stay dormant in service. The gate is the swing: dormant before the

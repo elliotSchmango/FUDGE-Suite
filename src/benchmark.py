@@ -17,8 +17,6 @@ def default_roster():
          "scorers": ["accuracy", "asr"], "unlearn_client_ids": ["0", "1", "2", "3"]},
         {"name": "neurotoxin", "threat_model": "neurotoxin", "threat_model_args": {"mask_ratio": 0.1},
          "scorers": ["accuracy", "asr"]},
-        {"name": "edgecase", "threat_model": "edgecase", "threat_model_args": {"source_class": 1, "tail_fraction": 0.1},
-         "scorers": ["accuracy", "edgecase_asr"], "seeds": [0, 1]},
         {"name": "badfu", "threat_model": "badfu", "threat_model_args": {"camou_ratio": 0.2},
          "scorers": ["accuracy", "asr"], "resurgence_probe": True},
         {"name": "fedmua", "threat_model": "fedmua", "threat_model_args": {"victim_class": 0, "num_requests": 20},
